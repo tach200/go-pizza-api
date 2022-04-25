@@ -17,7 +17,7 @@ func pizzahutStoreLocator(postcode string) (string, error) {
 	// Make a request to the endpoint.
 	body := request.UserAgentGetReq(endpoint)
 
-	// Put the JSON data into a struct
+	// Put the JSON data into a struct.
 	sd := []PizzahutDetails{}
 	err := json.Unmarshal([]byte(body), &sd)
 	if err != nil {
