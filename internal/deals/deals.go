@@ -6,6 +6,8 @@ import (
 	"go-pizza-api/internal/pizzahut"
 	"strconv"
 	"sync"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 type AllDeals struct {
@@ -17,7 +19,11 @@ type AllDeals struct {
 	Rank float64
 }
 
-func GetDeals(postcode string) []AllDeals {
+func GetDeals(tracer opentracing.Tracer, postcode string) []AllDeals {
+
+	span := tracer.StartSpan("/GET Deals")
+	defer span.Finish()
+
 	//Create list of structs to store clean data.
 	deals := []AllDeals{}
 	var wg sync.WaitGroup
@@ -25,6 +31,9 @@ func GetDeals(postcode string) []AllDeals {
 	wg.Add(3)
 
 	go func() {
+		pizzaHutSpan := tracer.StartSpan("/GET PizzaHut", opentracing.ChildOf(span.Context()))
+		defer pizzaHutSpan.Finish()
+
 		defer wg.Done()
 		pizzahut, err := pizzahut.GetPizzahutDeals(postcode)
 		if err != nil {
@@ -42,6 +51,9 @@ func GetDeals(postcode string) []AllDeals {
 	}()
 
 	go func() {
+		papaJohnSpan := tracer.StartSpan("/GET PapaJohn", opentracing.ChildOf(span.Context()))
+		defer papaJohnSpan.Finish()
+
 		defer wg.Done()
 		papajohns, err := papajohns.GetPapajohnsDeals(postcode)
 		if err != nil {
@@ -59,6 +71,9 @@ func GetDeals(postcode string) []AllDeals {
 	}()
 
 	go func() {
+		dominosSpan := tracer.StartSpan("/GET Dominos", opentracing.ChildOf(span.Context()))
+		defer dominosSpan.Finish()
+
 		defer wg.Done()
 		dominos, err := dominos.GetDominosDeals(postcode)
 		if err != nil {
