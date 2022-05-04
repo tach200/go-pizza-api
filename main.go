@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	cfg := &config.Configuration{
 		ServiceName: "go-pizza",
 		// not sure what this is.
