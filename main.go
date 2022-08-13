@@ -11,8 +11,8 @@ type PostCodeEvent struct {
 	Postcode string `json:"postcode"`
 }
 
-func HandleRequest(ctx context.Context, postcode PostCodeEvent) []deals.AllDeals {
-	return deals.GetDeals(postcode.Postcode)
+func HandleRequest(ctx context.Context, postcode PostCodeEvent) ([]deals.AllDeals, error) {
+	return deals.GetDeals(postcode.Postcode), nil
 }
 
 func main() {
