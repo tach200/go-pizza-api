@@ -8,7 +8,7 @@ import (
 
 const (
 	pricePattern   = "[+-]?([0-9]*[.])?[0-9]+"
-	keywordPattern = "(?i)\bpersonal|\bsmall|\bmedium|\blarge|\bxxl|^([0-9])"
+	keywordPattern = "(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge|\\bxxl|([0-9])"
 )
 
 var (
@@ -43,6 +43,32 @@ var (
 	}
 )
 
+// rankScore attempts to generate a value which reflects how good the deal is
+// higher is better, but this is subject to change in the future.
+func rankScore(dealTitle, dealDesc string, pizzaSizes map[string]float64) float64 {
+	keywords, err := getDealKeywords(dealDesc)
+	if err != nil {
+		return -1
+	}
+
+	scoreArr, err := convertToScoreArr(keywords, pizzaSizes)
+	if err != nil {
+		return -1
+	}
+
+	dealCost, err := getDealCost(dealTitle, dealDesc)
+	if err != nil {
+		return -1
+	}
+
+	score, err := calculateScoreArr(scoreArr, dealCost)
+	if err != nil {
+		return -1
+	}
+
+	return score
+}
+
 // getDealCost will attempt to return the cost of the deal
 // the information that is returned is not guranteed to be the cost, but is most likely
 // a regular expression is used to find numbers
@@ -63,25 +89,27 @@ func getDealCost(dealTitle, dealDesc string) (float64, error) {
 	return findMaxFloat(floats), nil
 }
 
+// getDealKeywords will extracts keywords that will be used to help calculate the final score.
 func getDealKeywords(dealDesc string) ([]string, error) {
 	reg := regexp.MustCompile(keywordPattern)
 
 	keywords := reg.FindAllString(dealDesc, -1)
 
 	if len(keywords) < 1 {
-		return nil, errors.New("error: no keywords extracted from text.")
+		return nil, errors.New("error: no keywords extracted from text")
 	}
 
 	return keywords, nil
 }
 
+// convertToScoreArr converts a text string such as 'large' into the corresponding pizza size in inches.
 func convertToScoreArr(keywords []string, pizzaSizes map[string]float64) ([]float64, error) {
 	len := len(keywords)
 	var floats []float64
-	switch len {
-	case 1:
+	switch {
+	case len == 1:
 		floats = append(floats, pizzaSizes[keywords[0]])
-	case 2:
+	case len >= 2:
 
 		amount, err := strconv.ParseFloat(keywords[0], 32)
 		if err != nil {
@@ -106,7 +134,7 @@ func calculateScoreArr(scoreArr []float64, dealCost float64) (float64, error) {
 	case 2:
 		return ((scoreArr[0] * scoreArr[1]) / dealCost), nil
 	default:
-		return 0, errors.New("error: unimplemented or an error")
+		return -1, errors.New("error: unimplemented or an error")
 	}
 }
 

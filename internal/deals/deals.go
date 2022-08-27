@@ -43,7 +43,7 @@ func GetDeals(postcode string) []AllDeals {
 				DealName:   item.Title,
 				DealDesc:   item.Desc,
 				Url:        "https://www.pizzahut.co.uk/order/deal/?id=" + item.Id,
-				Rank:       0,
+				Rank:       rankScore(item.Title, item.Desc, pizzahutSizes),
 			})
 		}
 	}()
@@ -63,7 +63,7 @@ func GetDeals(postcode string) []AllDeals {
 				DealName:   item.Name,
 				Url:        "https://www.papajohns.co.uk/" + item.Url,
 				DealDesc:   item.Desc,
-				Rank:       0,
+				Rank:       rankScore(item.Name, item.Desc, papajohsSizes),
 			})
 		}
 	}()
@@ -83,7 +83,7 @@ func GetDeals(postcode string) []AllDeals {
 				DealName:   item.Name,
 				Url:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
 				DealDesc:   item.Deal[0].Desc,
-				Rank:       0,
+				Rank:       rankScore(item.Name, item.Deal[0].Desc, dominosSizes),
 			})
 		}
 	}()
