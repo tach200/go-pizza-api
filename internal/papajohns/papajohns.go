@@ -2,6 +2,7 @@ package papajohns
 
 import (
 	"errors"
+	"fmt"
 	"go-pizza-api/internal/request"
 
 	"github.com/gocolly/colly"
@@ -10,6 +11,7 @@ import (
 // No API exposed so have to webscrape for this one.
 func papajohnsStoreInfo(postcode string) string {
 	// Create the endpoint
+	fmt.Printf("papajohns received postcode %s", postcode)
 	endpoint := "https://www.papajohns.co.uk/store-locator.aspx?postcode=" + postcode
 
 	// Scrape the store URL from the store-locator to ensure correct deals.
