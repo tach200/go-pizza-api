@@ -89,16 +89,6 @@ func rankScore(dealTitle, dealDesc string, pizzaSizes map[string]float64) float6
 		return -1
 	}
 
-	// percentageDeal := isPercentageDeal(dealTitle, dealDesc)
-	// if percentageDeal {
-	// 	percent, err := getPercentage(dealTitle)
-	// 	if err != nil {
-	// 		return -1
-	// 	}
-
-	// 	 discountCost := calculateDiscount(percent, dealCost)
-	// }
-
 	score, err := calculateScoreArr(scoreArr, dealCost)
 	if err != nil {
 		return -1
