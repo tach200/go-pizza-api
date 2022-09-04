@@ -184,3 +184,32 @@ func Test_rankScore(t *testing.T) {
 		})
 	}
 }
+
+func Test_calculateDiscount(t *testing.T) {
+	type args struct {
+		dealPercentage float64
+		dealCost       float64
+	}
+	tests := []struct {
+		name string
+		args args
+		want float64
+	}{
+		// TODO: Add test cases.
+		{
+			name: "calculate discount",
+			args: args{
+				dealPercentage: 50,
+				dealCost:       100,
+			},
+			want: 50,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateDiscount(tt.args.dealPercentage, tt.args.dealCost); got != tt.want {
+				t.Errorf("calculateDiscount() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
