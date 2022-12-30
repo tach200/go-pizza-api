@@ -13,15 +13,10 @@ type AllDeals struct {
 	DealName   string
 	DealDesc   string
 	Url        string
-	// Rank is currently not supported.
-	Rank float64
+	Rank       float64
 }
 
 func GetDeals(postcode string) []AllDeals {
-
-	// span := tracer.StartSpan("/GET Deals")
-	// defer span.Finish()
-
 	//Create list of structs to store clean data.
 	deals := []AllDeals{}
 	var wg sync.WaitGroup
@@ -29,9 +24,6 @@ func GetDeals(postcode string) []AllDeals {
 	wg.Add(3)
 
 	go func() {
-		// pizzaHutSpan := tracer.StartSpan("/GET PizzaHut", opentracing.ChildOf(span.Context()))
-		// defer pizzaHutSpan.Finish()
-
 		defer wg.Done()
 		pizzahut, err := pizzahut.GetPizzahutDeals(postcode)
 		if err != nil {
@@ -49,29 +41,23 @@ func GetDeals(postcode string) []AllDeals {
 	}()
 
 	go func() {
-		// papaJohnSpan := tracer.StartSpan("/GET PapaJohn", opentracing.ChildOf(span.Context()))
-		// defer papaJohnSpan.Finish()
-
 		defer wg.Done()
-		papajohns, err := papajohns.GetPapajohnsDeals(postcode)
+		papajohns, err := papajohns.GetDeals(postcode)
 		if err != nil {
 			return
 		}
-		for _, item := range papajohns {
+		for _, item := range papajohns.Deals {
 			deals = append(deals, AllDeals{
 				Restaurant: "Papa Johns",
-				DealName:   item.Name,
-				Url:        "https://www.papajohns.co.uk/" + item.Url,
+				DealName:   item.DisplayName,
+				Url:        "https://www.papajohns.co.uk/deals", //Need to add proper URLS here
 				DealDesc:   item.Desc,
-				Rank:       rankScore(item.Name, item.Desc, papajohsSizes),
+				Rank:       rankScore(item.DisplayName, item.Desc, papajohsSizes),
 			})
 		}
 	}()
 
 	go func() {
-		// dominosSpan := tracer.StartSpan("/GET Dominos", opentracing.ChildOf(span.Context()))
-		// defer dominosSpan.Finish()
-
 		defer wg.Done()
 		dominos, err := dominos.GetDominosDeals(postcode)
 		if err != nil {
