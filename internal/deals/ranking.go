@@ -4,11 +4,13 @@ import (
 	"errors"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
-	pricePattern   = "[+-]?([0-9]*[.])?[0-9]+"
-	keywordPattern = "(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge|\\bxxl|([0-9])"
+	pricePattern      = "[+-]?([0-9]*[.])?[0-9]+"
+	keywordPattern    = "(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge|\\bxxl|([0-9])"
+	percentagePattern = "(\\d+(\\.\\d+)?%)"
 )
 
 var (
@@ -41,9 +43,35 @@ var (
 		"large":  14,
 		"Large":  14,
 	}
+
+	// sizes of pizza in inches, but using price as lookup
+	// this is also only a vague reference
+	dominosCostSizes = map[float64]float64{
+		22.99: 13.5,
+		19.99: 11.5,
+		15.99: 9.5,
+		8.99:  7.0,
+	}
+	papaJohnsCostSizes = map[float64]float64{
+		23.99: 15.5,
+		21.99: 13.5,
+		19.99: 11.5,
+		17.99: 8,
+	}
+
+	// Costs go from largest size to smallest
+	dominosCosts   = []float64{22.99, 19.99, 15.99, 8.99}
+	papaJohnsCosts = []float64{23.99, 21.99, 19.99, 17.99}
+	pizzahutCosts  = []float64{21.49, 19.49}
 )
 
-// rankScore attempts to generate a value which reflects how good the deal is
+// dealCategory returns a string which catergorises the deal
+// this is because deals that use percentage need to be calculated differently.
+func isPercentageDeal(dealTitle, dealDesc string) bool {
+	return strings.Contains("%", dealTitle)
+}
+
+// rankScore attempts to generate a value which reflects how good the deal iszoo
 // higher is better, but this is subject to change in the future.
 func rankScore(dealTitle, dealDesc string, pizzaSizes map[string]float64) float64 {
 	keywords, err := getDealKeywords(dealDesc)
@@ -125,6 +153,7 @@ func convertToScoreArr(keywords []string, pizzaSizes map[string]float64) ([]floa
 	return floats, nil
 }
 
+// calculateScoreArr calculates the final score.
 func calculateScoreArr(scoreArr []float64, dealCost float64) (float64, error) {
 	len := len(scoreArr)
 
@@ -160,4 +189,21 @@ func findMaxFloat(floats []float64) (max float64) {
 		}
 	}
 	return max
+}
+
+// getPercentage uses a regular expression to extract any information about percentages
+func getPercentage(dealTitle string) (float64, error) {
+	reg := regexp.MustCompile(percentagePattern)
+	percent := reg.FindString(dealTitle)
+
+	float, err := strconv.ParseFloat(percent, 64)
+	if err != nil {
+		return -1, err
+	}
+
+	return float, err
+}
+
+func calculateDiscount(dealPercentage, dealCost float64) float64 {
+	return dealCost - (dealCost * dealPercentage / 100)
 }

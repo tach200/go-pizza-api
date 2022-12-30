@@ -59,17 +59,26 @@ func GetDeals(postcode string) []AllDeals {
 
 	go func() {
 		defer wg.Done()
-		dominos, err := dominos.GetDominosDeals(postcode)
+		domDeals, vouchers, err := dominos.GetDominosDealsVouchers(postcode)
 		if err != nil {
 			return
 		}
-		for _, item := range dominos[0].StoreDeals {
+		for _, item := range domDeals[0].StoreDeals {
 			deals = append(deals, AllDeals{
 				Restaurant: "Domino's",
 				DealName:   item.Name,
 				Url:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
 				DealDesc:   item.Deal[0].Desc,
 				Rank:       rankScore(item.Name, item.Deal[0].Desc, dominosSizes),
+			})
+		}
+		for _, item := range vouchers {
+			deals = append(deals, AllDeals{
+				Restaurant: "Domino's",
+				DealName:   "Savings Voucher",
+				Url:        "https://www.dominos.co.uk/deals",
+				DealDesc:   item.Desc,
+				Rank:       rankScore("Savings Voucher", item.Desc, dominosSizes),
 			})
 		}
 	}()

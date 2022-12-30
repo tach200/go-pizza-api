@@ -2,7 +2,6 @@ package dominos
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-pizza-api/internal/request"
 	"strconv"
 )
@@ -51,24 +50,50 @@ type DominosDeal struct {
 	Id   int    `json:"id"`
 }
 
-func GetDominosDeals(postcode string) ([]DominosStoreDeals, error) {
-	// 1. Retrieve dominos store data to construct the endpoint URL.
-	storeData, err := dominoStoreLocator(postcode)
-	if err != nil {
-		return nil, err
-	}
-	endpoint := "https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=" + strconv.Itoa(storeData.MenuId) + "&fulfilmentMethod=1&isoCode=en-GB&storeId=" + strconv.Itoa(storeData.Id)
-	fmt.Println("dominos deal endpoint: " + endpoint)
+func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID string) {
 
-	// 2. Make a request to the endpoint.
+	endpoint := "https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=" + menuID + "&fulfilmentMethod=1&isoCode=en-GB&storeId=" + storeID
+
 	body := request.DominosGet(endpoint)
 
-	// 4. Populate structs with requests response.
 	sd := []DominosStoreDeals{}
-	err = json.Unmarshal([]byte(body), &sd)
+	err := json.Unmarshal([]byte(body), &sd)
 	if err != nil {
-		return nil, err
+		dealsChan <- []DominosStoreDeals{}
 	}
 
-	return sd, nil
+	dealsChan <- sd
+}
+
+type Vouchers []struct {
+	Desc string `json:"description"`
+}
+
+func GetDominosVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
+	endpoint := "https://www.dominos.co.uk/Deals/StoreDealsVouchers?fulfilmentMethod=1&storeId=" + storeID + "&v=120.1.0.8&vouchersOnlineVersion=" + menuID
+
+	body := request.DominosGet(endpoint)
+
+	vouchers := Vouchers{}
+	err := json.Unmarshal([]byte(body), &vouchers)
+	if err != nil {
+		voucherChan <- Vouchers{}
+	}
+
+	voucherChan <- vouchers
+}
+
+func GetDominosDealsVouchers(postcode string) ([]DominosStoreDeals, Vouchers, error) {
+	dealsChan := make(chan []DominosStoreDeals, 1)
+	voucherChan := make(chan Vouchers, 1)
+
+	storeData, err := dominoStoreLocator(postcode)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	go GetDominosDeals(dealsChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
+	go GetDominosVouchers(voucherChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
+
+	return <-dealsChan, <-voucherChan, nil
 }
