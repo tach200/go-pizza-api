@@ -9,11 +9,11 @@ import (
 )
 
 type AllDeals struct {
-	Restaurant string
-	DealName   string
-	DealDesc   string
-	Url        string
-	Rank       float64
+	Restaurant string  `json:"Restaurant"`
+	DealName   string  `json:"DealName"`
+	DealDesc   string  `json:"DealDesc"`
+	Url        string  `json:"Url"`
+	Rank       float64 `json:"Rank"`
 }
 
 func GetDeals(postcode string) []AllDeals {
