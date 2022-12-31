@@ -46,14 +46,16 @@ func GetDeals(postcode string) []AllDeals {
 		if err != nil {
 			return
 		}
-		for _, item := range papajohns.Deals {
-			deals = append(deals, AllDeals{
-				Restaurant: "Papa Johns",
-				DealName:   item.DisplayName,
-				Url:        "https://www.papajohns.co.uk/deals", //Need to add proper URLS here
-				DealDesc:   item.Desc,
-				Rank:       rankScore(item.DisplayName, item.Desc, papajohsSizes),
-			})
+		for _, item := range papajohns {
+			if item.Available == 1 {
+				deals = append(deals, AllDeals{
+					Restaurant: "Papa Johns",
+					DealName:   item.DisplayName,
+					Url:        "https://www.papajohns.co.uk/deals",
+					DealDesc:   item.Desc,
+					// Rank:       rankScore(item.DisplayName, item.Desc, papajohsSizes),
+				})
+			}
 		}
 	}()
 

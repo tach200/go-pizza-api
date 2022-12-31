@@ -19,8 +19,12 @@ func main() {
 	lambda.Start(HandleRequest)
 }
 
-// // Easier for quick local testing
+// Easier for quick local testing
 // func main() {
 // 	deals := deals.GetDeals("me46ea")
-// 	fmt.Printf("%+v", deals)
+// 	json, err := json.Marshal(deals)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Printf("%+v\n", string(json))
 // }

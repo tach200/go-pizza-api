@@ -51,6 +51,23 @@ func DominosGet(endpoint string) []byte {
 	return body
 }
 
+func PapaGet(endpoint string) []byte {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return body
+}
+
 // curl example
 // curl 'https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=637670407835700000&fulfilmentMethod=1&isoCode=en-GB&storeId=28131&v=97.1.0.4'
 // -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:91.0) Gecko/20100101 Firefox/91.0'

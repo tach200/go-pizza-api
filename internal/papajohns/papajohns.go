@@ -16,8 +16,7 @@ type StoreID struct {
 }
 
 type StoreInfo struct {
-	Version int     `json:"version"`
-	Data    StoreID `json:"data"`
+	Data StoreID `json:"data"`
 }
 
 // getStoreInfo returns information about the store closest to that postcode
@@ -25,7 +24,7 @@ type StoreInfo struct {
 func getStoreInfo(postcode string) (StoreInfo, error) {
 	endpoint := storeEndpoint + postcode
 
-	body := request.UserAgentGetReq(endpoint)
+	body := request.PapaGet(endpoint)
 
 	storeData := StoreInfo{}
 	err := json.Unmarshal([]byte(body), &storeData)
@@ -40,30 +39,29 @@ type Deal struct {
 	DisplayName string `json:"displayName"`
 	PromoURL    string `json:"promo"`
 	Desc        string `json:"description"`
-	Available   int    `json:"availibility"`
+	Available   int    `json:"availability"`
 }
 
 type Deals struct {
-	Version int    `json:"version"`
-	Deals   []Deal `json:"data"`
+	Deals []Deal `json:"data"`
 }
 
 // getDeals returns the deals that are available in the given store.
-func GetDeals(postcode string) (Deals, error) {
+func GetDeals(postcode string) ([]Deal, error) {
 	storeID, err := getStoreInfo(postcode)
 	if err != nil {
-		return Deals{}, err
+		return []Deal{}, err
 	}
 
 	endpoint := dealsEndpoint + strconv.Itoa(storeID.Data.ID)
 
-	body := request.UserAgentGetReq(endpoint)
+	body := request.PapaGet(endpoint)
 
 	var deals Deals
 	err = json.Unmarshal([]byte(body), &deals)
 	if err != nil {
-		return deals, err
+		return deals.Deals, err
 	}
 
-	return deals, nil
+	return deals.Deals, nil
 }
