@@ -7,17 +7,17 @@ import (
 )
 
 // Structs Hold information about the store
-type DominosStoreDetails struct {
+type StoreData struct {
 	Id         int  `json:"id"`
 	Open       bool `json:"isOpen"`
 	CanDeliver bool `json:"localStoreCanDeliverToAddress"`
 	MenuId     int  `json:"MenuVersion"`
 }
-type DominosStore struct {
-	Store DominosStoreDetails `json:"localStore"`
+type Stores struct {
+	Store StoreData `json:"localStore"`
 }
 
-func dominoStoreLocator(postcode string) (DominosStoreDetails, error) {
+func dominoStoreLocator(postcode string) (StoreData, error) {
 	// Construct the endpoint URL.
 	endpoint := "https://www.dominos.co.uk/storefindermap/storesearch?searchText=" + postcode
 	// fmt.Println("dominos store locator endpoint: " + endpoint)
@@ -26,7 +26,7 @@ func dominoStoreLocator(postcode string) (DominosStoreDetails, error) {
 	body := request.DominosGet(endpoint)
 
 	// Populate structs with requests response.
-	sd := DominosStore{}
+	sd := Stores{}
 	err := json.Unmarshal([]byte(body), &sd)
 	if err != nil {
 		return sd.Store, err

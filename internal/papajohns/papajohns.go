@@ -39,7 +39,7 @@ type Deal struct {
 	DisplayName string `json:"displayName"`
 	PromoURL    string `json:"promo"`
 	Desc        string `json:"description"`
-	Available   int    `json:"availability"`
+	Available   bool   `json:"showOnDealsPage"`
 }
 
 type Deals struct {

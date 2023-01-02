@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"go-pizza-api/internal/request"
 	"log"
+	"strings"
 )
 
 type PizzahutDetails struct {
@@ -29,9 +30,11 @@ func pizzahutStoreLocator(postcode string) (string, error) {
 }
 
 type PizzahutMenuItem struct {
-	Id    string `json:"id"`
-	Title string `json:"title"`
-	Desc  string `json:"desc"`
+	Id        string `json:"id"`
+	Title     string `json:"title"`
+	Desc      string `json:"desc"`
+	Type      string `json:"productType"`
+	OtherType string `json:"type"`
 }
 
 func getPizzahutMenu(menu chan<- []PizzahutMenuItem) {
@@ -52,9 +55,10 @@ func getPizzahutMenu(menu chan<- []PizzahutMenuItem) {
 }
 
 type PizzahutDeals struct {
-	Id     string  `json:"id"`
-	Price  float32 `json:"price"`
-	Hidden bool    `json:"hidden"`
+	Id       string  `json:"id"`
+	Price    float32 `json:"price"`
+	Hidden   bool    `json:"hidden"`
+	Delivery bool    `json:""`
 }
 
 func GetPizzahutDeals(postcode string) ([]PizzahutMenuItem, error) {
@@ -94,11 +98,40 @@ func GetPizzahutDeals(postcode string) ([]PizzahutMenuItem, error) {
 	var availableItems []PizzahutMenuItem
 	for _, v := range <-menu {
 		for _, v2 := range sd {
-			if v.Id == v2.Id {
+			if v.Id == v2.Id && (v.Type == "deal" || v.OtherType == "deal") {
 				availableItems = append(availableItems, v)
 				break
 			}
 		}
 	}
+
+	//TODO:
+	// The current approach leaves duplicates, remove these for now
+	availableItems = unique(availableItems)
+
 	return availableItems, nil
+}
+
+// https://stackoverflow.com/questions/57706801/deduplicate-array-of-structs
+func unique(sample []PizzahutMenuItem) []PizzahutMenuItem {
+	var unique []PizzahutMenuItem
+
+	type key struct{ value1, value2 string }
+
+	m := make(map[key]int)
+
+	for _, v := range sample {
+		k := key{strings.ToLower(v.Desc), v.Id}
+		if i, ok := m[k]; ok {
+			// Overwrite previous value per requirement in
+			// question to keep last matching value.
+			unique[i] = v
+		} else {
+			// Unique key found. Record position and collect
+			// in result.
+			m[k] = len(unique)
+			unique = append(unique, v)
+		}
+	}
+	return unique
 }
