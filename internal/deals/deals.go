@@ -1,6 +1,7 @@
 package deals
 
 import (
+	"fmt"
 	"go-pizza-api/internal/dominos"
 	"go-pizza-api/internal/papajohns"
 	"go-pizza-api/internal/pizzahut"
@@ -17,6 +18,7 @@ type AllDeals struct {
 }
 
 func GetDeals(postcode string) []AllDeals {
+	fmt.Printf("GetDeals called with postcode: %s", postcode)
 	//Create list of structs to store clean data.
 	deals := []AllDeals{}
 	var wg sync.WaitGroup

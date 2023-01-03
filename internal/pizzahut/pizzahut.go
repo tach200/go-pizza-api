@@ -2,6 +2,8 @@ package pizzahut
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"go-pizza-api/internal/request"
 	"log"
 	"strings"
@@ -26,6 +28,10 @@ func pizzahutStoreLocator(postcode string) (string, error) {
 		return sd[0].StoreID, err
 	}
 	// The first store is the one available for delivery.
+	if len(sd) == 0 {
+		return "", errors.New("error : delivery not available for this postcode")
+	}
+
 	return sd[0].StoreID, nil
 }
 
@@ -68,7 +74,7 @@ func GetPizzahutDeals(postcode string) ([]PizzahutMenuItem, error) {
 	// Construct the endpoint.
 	storeData, err := pizzahutStoreLocator(postcode)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Print(err)
 		return nil, err
 	}
 	endpoint := "https://api.pizzahut.io/v2/products/deals?hutid=" + storeData + "&sector=uk-1&delivery=true"
