@@ -46,8 +46,9 @@ type DominosDeals struct {
 }
 
 type DominosDeal struct {
-	Desc string `json:"description"`
-	Id   int    `json:"id"`
+	Desc  string  `json:"description"`
+	Id    int     `json:"id"`
+	Price float64 `json:"price"`
 }
 
 func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID string) {

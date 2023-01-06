@@ -35,11 +35,12 @@ func pizzahutStoreLocator(postcode string) (string, error) {
 }
 
 type PizzahutMenuItem struct {
-	Id        string `json:"id"`
-	Title     string `json:"title"`
-	Desc      string `json:"desc"`
-	Type      string `json:"productType"`
-	OtherType string `json:"type"`
+	Id        string  `json:"id"`
+	Title     string  `json:"title"`
+	Desc      string  `json:"desc"`
+	Type      string  `json:"productType"`
+	OtherType string  `json:"type"`
+	Price     float64 `json:"price"`
 }
 
 func getPizzahutMenu(menu chan<- []PizzahutMenuItem) {
