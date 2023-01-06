@@ -2,7 +2,6 @@ package dominos
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-pizza-api/internal/request"
 	"strconv"
 )
@@ -57,7 +56,7 @@ func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID strin
 
 	body := request.DominosGet(endpoint)
 
-	fmt.Printf("Dominos Deals Body : %s", string(body))
+	// fmt.Printf("Dominos Deals Body : %s", string(body))
 
 	sd := []DominosStoreDeals{}
 	err := json.Unmarshal([]byte(body), &sd)
@@ -65,7 +64,7 @@ func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID strin
 		dealsChan <- []DominosStoreDeals{}
 	}
 
-	fmt.Printf("Dominos Deals : %+v", sd)
+	// fmt.Printf("Dominos Deals : %+v", sd)
 
 	dealsChan <- sd
 }
@@ -79,7 +78,7 @@ func GetDominosVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
 
 	body := request.DominosGet(endpoint)
 
-	fmt.Printf("Dominos Vouchers Body : %s", string(body))
+	// fmt.Printf("Dominos Vouchers Body : %s", string(body))
 
 	vouchers := Vouchers{}
 	err := json.Unmarshal([]byte(body), &vouchers)
@@ -87,13 +86,13 @@ func GetDominosVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
 		voucherChan <- Vouchers{}
 	}
 
-	fmt.Printf("Dominos Vouchers : %+v", vouchers)
+	// fmt.Printf("Dominos Vouchers : %+v", vouchers)
 
 	voucherChan <- vouchers
 }
 
 func GetDominosDealsVouchers(postcode string) ([]DominosStoreDeals, Vouchers, error) {
-	fmt.Println("GetDominosDealsVouchers called")
+	// fmt.Println("GetDominosDealsVouchers called")
 	dealsChan := make(chan []DominosStoreDeals, 1)
 	voucherChan := make(chan Vouchers, 1)
 
@@ -102,7 +101,7 @@ func GetDominosDealsVouchers(postcode string) ([]DominosStoreDeals, Vouchers, er
 		return nil, nil, err
 	}
 
-	fmt.Printf("Dominos Store Data : %+v", storeData)
+	// fmt.Printf("Dominos Store Data : %+v", storeData)
 
 	go GetDominosDeals(dealsChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
 	go GetDominosVouchers(voucherChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))

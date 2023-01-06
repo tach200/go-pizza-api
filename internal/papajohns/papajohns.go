@@ -4,11 +4,24 @@ import (
 	"encoding/json"
 	"go-pizza-api/internal/request"
 	"strconv"
+	"time"
 )
 
 const (
 	storeEndpoint = "https://api2.papajohns.co.uk/api/v1/Store/delivery/"
 	dealsEndpoint = "https://api2.papajohns.co.uk/api/v1/deal/"
+)
+
+var (
+	daysOfWeek = map[int]string{
+		1: "Monday",
+		2: "Tuesday",
+		3: "Wednesday",
+		4: "Thursday",
+		5: "Friday",
+		6: "Saturday",
+		7: "Sunday",
+	}
 )
 
 type StoreID struct {
@@ -36,10 +49,18 @@ func getStoreInfo(postcode string) (StoreInfo, error) {
 }
 
 type Deal struct {
-	DisplayName string `json:"displayName"`
-	PromoURL    string `json:"promo"`
-	Desc        string `json:"description"`
-	Available   bool   `json:"showOnDealsPage"`
+	DisplayName string   `json:"name"`
+	PromoURL    string   `json:"promo"`
+	Desc        string   `json:"description"`
+	Displayed   bool     `json:"showOnDealsPage"`
+	Available   int      `json:"availability"`
+	Price       float64  `json:"price"`
+	Schedule    Schedule `json:"schedule"`
+	StudentDeal bool     `json:"studentDeal"`
+}
+
+type Schedule struct {
+	DaysOfWeek []int `json:"daysOfWeek"`
 }
 
 type Deals struct {
@@ -63,5 +84,28 @@ func GetDeals(postcode string) ([]Deal, error) {
 		return deals.Deals, err
 	}
 
-	return deals.Deals, nil
+	return scheduleFilter(deals.Deals), nil
+}
+
+// scheduleFilter will remove deals that are not available
+func scheduleFilter(allDeals []Deal) []Deal {
+	var availableDeals []Deal
+
+	// fmt.Print(allDeals)
+
+	for _, deal := range allDeals {
+		if len(deal.Schedule.DaysOfWeek) == 0 {
+			availableDeals = append(availableDeals, deal)
+			continue
+		}
+
+		for _, day := range deal.Schedule.DaysOfWeek {
+			if daysOfWeek[day] == time.Now().Weekday().String() {
+				availableDeals = append(availableDeals, deal)
+				break
+			}
+		}
+	}
+
+	return availableDeals
 }
