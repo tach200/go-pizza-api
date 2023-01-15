@@ -9,7 +9,7 @@ import (
 
 const (
 	pricePattern      = "[+-]?([0-9]*[.])?[0-9]+"
-	keywordPattern    = "(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge|\\bxxl|([0-9])"
+	keywordPattern    = "(?m)(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge|\\bxxl|\\bside|\\badd|\\btoppings|([0-9] * [0-9]*)"
 	percentagePattern = "(\\d+(\\.\\d+)?%)"
 )
 
@@ -24,6 +24,11 @@ var (
 		"Medium":   11.5,
 		"large":    13.5,
 		"Large":    13.5,
+		// Used to filter out junk
+		"side":     0,
+		"Side":     0,
+		"toppings": 0,
+		"Toppings": 0,
 	}
 	papajohsSizes = map[string]float64{
 		"small":  8,
@@ -34,6 +39,11 @@ var (
 		"Large":  13.5,
 		"XXL":    15.5,
 		"xxl":    15.5,
+		// Used to filter out junk
+		"side":     0,
+		"Side":     0,
+		"toppings": 0,
+		"Toppings": 0,
 	}
 	pizzahutSizes = map[string]float64{
 		"small":  9,
@@ -43,78 +53,41 @@ var (
 		"large":  14,
 		"Large":  14,
 	}
-
-	// sizes of pizza in inches, but using price as lookup
-	// this is also only a vague reference
-	dominosCostSizes = map[float64]float64{
-		22.99: 13.5,
-		19.99: 11.5,
-		15.99: 9.5,
-		8.99:  7.0,
-	}
-	papaJohnsCostSizes = map[float64]float64{
-		23.99: 15.5,
-		21.99: 13.5,
-		19.99: 11.5,
-		17.99: 8,
-	}
-
-	// Costs go from largest size to smallest
-	dominosCosts   = []float64{22.99, 19.99, 15.99, 8.99}
-	papaJohnsCosts = []float64{23.99, 21.99, 19.99, 17.99}
-	pizzahutCosts  = []float64{21.49, 19.49}
 )
 
-// dealCategory returns a string which catergorises the deal
-// this is because deals that use percentage need to be calculated differently.
-func isPercentageDeal(dealTitle, dealDesc string) bool {
-	return strings.Contains("%", dealTitle)
+type keywordType struct {
+	value      float64
+	multiplier bool
 }
 
 // rankScore attempts to generate a value which reflects how good the deal iszoo
 // higher is better, but this is subject to change in the future.
-func rankScore(dealTitle, dealDesc string, pizzaSizes map[string]float64) float64 {
+func rankScore(dealDesc string, cost float64, pizzaSizes map[string]float64) float64 {
 	keywords, err := getDealKeywords(dealDesc)
 	if err != nil {
+		// fmt.Printf("error: error finding deal keywords %s", err)
 		return -1
 	}
 
 	scoreArr, err := convertToScoreArr(keywords, pizzaSizes)
+	// fmt.Printf("error: error converting to score array %s", err)
 	if err != nil {
 		return -1
 	}
 
-	dealCost, err := getDealCost(dealTitle, dealDesc)
-	if err != nil {
-		return -1
+	dealCost := cost
+	if cost == 0 {
+		// fmt.Println("error: cost is 0")
+		return -1 //for now
 	}
 
 	score, err := calculateScoreArr(scoreArr, dealCost)
 	if err != nil {
+		// fmt.Printf("error: couldnt calculate a score %s", err)
 		return -1
 	}
 
 	return score
-}
-
-// getDealCost will attempt to return the cost of the deal
-// the information that is returned is not guranteed to be the cost, but is most likely
-// a regular expression is used to find numbers
-// the cost doesn't always include a '£' symbol, which makes this process a bit more complex.
-func getDealCost(dealTitle, dealDesc string) (float64, error) {
-	reg := regexp.MustCompile(pricePattern)
-	titleCosts := reg.FindAllString(dealTitle, -1)
-	descCosts := reg.FindAllString(dealDesc, -1)
-
-	// Combine the two lists before converting to floats
-	floats, err := costStrsToFloats(append(titleCosts, descCosts...))
-
-	if err != nil {
-		return 0, err
-	}
-
-	// The largest float number in the list is most likely to be the cost
-	return findMaxFloat(floats), nil
 }
 
 // getDealKeywords will extracts keywords that will be used to help calculate the final score.
@@ -131,79 +104,68 @@ func getDealKeywords(dealDesc string) ([]string, error) {
 }
 
 // convertToScoreArr converts a text string such as 'large' into the corresponding pizza size in inches.
-func convertToScoreArr(keywords []string, pizzaSizes map[string]float64) ([]float64, error) {
-	len := len(keywords)
-	var floats []float64
-	switch {
-	case len == 1:
-		floats = append(floats, pizzaSizes[keywords[0]])
-	case len >= 2:
+func convertToScoreArr(keywords []string, pizzaSizes map[string]float64) ([]keywordType, error) {
 
-		amount, err := strconv.ParseFloat(keywords[0], 32)
-		if err != nil {
-			return nil, err
+	keywordValues := make([]keywordType, 0)
+
+	for _, keyword := range keywords {
+		// TODO: better handle this keyword for deals
+		// don't want any keywords after add
+		if keyword == "add" {
+			break
 		}
 
-		floats = append(floats, amount)
-		floats = append(floats, pizzaSizes[keywords[1]])
-	default:
-		return nil, errors.New("error: unimplemented or an error")
+		val, ok := pizzaSizes[keyword]
+		if ok {
+
+			keywordType := keywordType{
+				value:      val,
+				multiplier: false,
+			}
+
+			keywordValues = append(keywordValues, keywordType)
+			continue
+		}
+
+		formatStr := strings.TrimSpace(keyword)
+		multiplier, err := strconv.ParseFloat(formatStr, 64)
+		if err != nil {
+			// fmt.Printf("error: couldn't parse float %s", err)
+			continue
+		}
+
+		keywordType := keywordType{
+			value:      multiplier,
+			multiplier: true,
+		}
+
+		keywordValues = append(keywordValues, keywordType)
 	}
 
-	return floats, nil
+	return keywordValues, nil
 }
 
 // calculateScoreArr calculates the final score.
-func calculateScoreArr(scoreArr []float64, dealCost float64) (float64, error) {
-	len := len(scoreArr)
+func calculateScoreArr(scoreArr []keywordType, dealCost float64) (float64, error) {
+	multiplyNextVal := false
+	valueToMultiply := 0.00
+	inchesOfPizza := 0.00
 
-	switch len {
-	case 1:
-		return (scoreArr[0] / dealCost), nil
-	case 2:
-		return ((scoreArr[0] * scoreArr[1]) / dealCost), nil
-	default:
-		return -1, errors.New("error: unimplemented or an error")
-	}
-}
-
-func costStrsToFloats(strFloats []string) ([]float64, error) {
-	var floats []float64
-
-	for _, strFl := range strFloats {
-		float, err := strconv.ParseFloat(strFl, 64)
-		if err != nil {
-			return nil, err
+	for _, val := range scoreArr {
+		if multiplyNextVal {
+			inchesOfPizza += (valueToMultiply * val.value)
+			valueToMultiply = 0
+			continue
 		}
-		floats = append(floats, float)
-	}
 
-	return floats, nil
-}
-
-func findMaxFloat(floats []float64) (max float64) {
-	max = 0.00
-	for _, float := range floats {
-		if float > max {
-			max = float
+		if val.multiplier {
+			multiplyNextVal = true
+			valueToMultiply = val.value
+			continue
 		}
-	}
-	return max
-}
 
-// getPercentage uses a regular expression to extract any information about percentages
-func getPercentage(dealTitle string) (float64, error) {
-	reg := regexp.MustCompile(percentagePattern)
-	percent := reg.FindString(dealTitle)
-
-	float, err := strconv.ParseFloat(percent, 64)
-	if err != nil {
-		return -1, err
+		inchesOfPizza += val.value
 	}
 
-	return float, err
-}
-
-func calculateDiscount(dealPercentage, dealCost float64) float64 {
-	return dealCost - (dealCost * dealPercentage / 100)
+	return (inchesOfPizza / dealCost), nil
 }

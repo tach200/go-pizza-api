@@ -2,8 +2,6 @@ package deals
 
 import (
 	"go-pizza-api/internal/dominos"
-	"go-pizza-api/internal/papajohns"
-	"go-pizza-api/internal/pizzahut"
 	"strconv"
 	"sync"
 )
@@ -25,43 +23,43 @@ func GetDeals(postcode string) []AllDeals {
 	// 3 requests need to be made
 	wg.Add(1)
 
-	go func() {
-		defer wg.Done()
-		pizzahut, err := pizzahut.GetPizzahutDeals(postcode)
-		if err != nil {
-			return
-		}
-		for _, item := range pizzahut {
-			deals = append(deals, AllDeals{
-				Restaurant: "Pizza Hut",
-				DealName:   item.Title,
-				DealDesc:   item.Desc,
-				Price:      item.Price,
-				Url:        "https://www.pizzahut.co.uk/order/deal/?id=" + item.Id,
-				// Rank:       rankScore(item.Title, item.Desc, pizzahutSizes),
-			})
-		}
-	}()
+	// go func() {
+	// 	defer wg.Done()
+	// 	pizzahut, err := pizzahut.GetPizzahutDeals(postcode)
+	// 	if err != nil {
+	// 		return
+	// 	}
+	// 	for _, item := range pizzahut {
+	// 		deals = append(deals, AllDeals{
+	// 			Restaurant: "Pizza Hut",
+	// 			DealName:   item.Title,
+	// 			DealDesc:   item.Desc,
+	// 			Price:      item.Price,
+	// 			Url:        "https://www.pizzahut.co.uk/order/deal/?id=" + item.Id,
+	// 			Rank:       rankScore(item.Desc, item.Price, pizzahutSizes),
+	// 		})
+	// 	}
+	// }()
 
-	go func() {
-		defer wg.Done()
-		papajohns, err := papajohns.GetDeals(postcode)
-		if err != nil {
-			return
-		}
-		for _, item := range papajohns {
-			if item.Displayed {
-				deals = append(deals, AllDeals{
-					Restaurant: "Papa Johns",
-					DealName:   item.DisplayName,
-					Url:        "https://www.papajohns.co.uk/deals",
-					DealDesc:   item.Desc,
-					Price:      item.Price,
-					// Rank:       rankScore(item.DisplayName, item.Desc, papajohsSizes),
-				})
-			}
-		}
-	}()
+	// go func() {
+	// 	defer wg.Done()
+	// 	papajohns, err := papajohns.GetDeals(postcode)
+	// 	if err != nil {
+	// 		return
+	// 	}
+	// 	for _, item := range papajohns {
+	// 		if item.Displayed {
+	// 			deals = append(deals, AllDeals{
+	// 				Restaurant: "Papa Johns",
+	// 				DealName:   item.DisplayName,
+	// 				Url:        "https://www.papajohns.co.uk/deals",
+	// 				DealDesc:   item.Desc,
+	// 				Price:      item.Price,
+	// 				Rank:       rankScore(item.Desc, item.Price, papajohsSizes),
+	// 			})
+	// 		}
+	// 	}
+	// }()
 
 	go func() {
 		defer wg.Done()
@@ -76,7 +74,7 @@ func GetDeals(postcode string) []AllDeals {
 				Url:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
 				Price:      item.Deal[0].Price,
 				DealDesc:   item.Deal[0].Desc,
-				// Rank:       rankScore(item.Name, item.Deal[0].Desc, dominosSizes),
+				Rank:       rankScore(item.Deal[0].Desc, item.Deal[0].Price, dominosSizes),
 			})
 		}
 		for _, item := range vouchers {
@@ -85,7 +83,7 @@ func GetDeals(postcode string) []AllDeals {
 				DealName:   "Savings Voucher",
 				Url:        "https://www.dominos.co.uk/deals",
 				DealDesc:   item.Desc,
-				// Rank:       rankScore("Savings Voucher", item.Desc, dominosSizes),
+				Rank:       rankScore(item.Desc, 0, dominosSizes),
 			})
 		}
 	}()
