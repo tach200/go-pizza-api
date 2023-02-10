@@ -44,6 +44,14 @@ func Test_getDealKeywords(t *testing.T) {
 			want:    []string{"Large", "Side"},
 			wantErr: false,
 		},
+		{
+			name: "extract correct keywords from the deal",
+			args: args{
+				dealDesc: "7 wings or 7 chunks, wedges, 500ml drink",
+			},
+			want:    []string{"7 ", "7 "},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -82,7 +90,7 @@ func Test_rank(t *testing.T) {
 }
 
 func Test_rankPizzaHut(t *testing.T) {
-	deals, err := pizzahut.GetPizzahutDeals("ME46EA")
+	deals, err := pizzahut.GetDeals("ME46EA")
 	assert.Nil(t, err)
 
 	for _, deal := range deals {
@@ -104,23 +112,39 @@ func Test_calculateScoreArr(t *testing.T) {
 		want    float64
 		wantErr bool
 	}{
+		// {
+		// 	name: "calculate the score of the array",
+		// 	args: args{
+		// 		scoreArr: []keywordType{
+		// 			{
+		// 				value:      2,
+		// 				multiplier: true,
+		// 			},
+		// 			{
+		// 				value:      0,
+		// 				multiplier: false,
+		// 			},
+		// 			{
+		// 				value:      9,
+		// 				multiplier: true,
+		// 			},
+		// 		},
+		// 	},
+		// },
 		{
 			name: "calculate the score of the array",
 			args: args{
 				scoreArr: []keywordType{
 					{
-						value:      2,
+						value:      7,
 						multiplier: true,
 					},
 					{
-						value:      0,
-						multiplier: false,
-					},
-					{
-						value:      9,
+						value:      7,
 						multiplier: true,
 					},
 				},
+				dealCost: 10.99,
 			},
 		},
 	}

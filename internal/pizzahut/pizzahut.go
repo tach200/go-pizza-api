@@ -8,34 +8,39 @@ import (
 	"strings"
 )
 
-type PizzahutDetails struct {
-	StoreID string `json:"id"`
+const (
+	storeURL     = "https://api.pizzahut.io/v1/huts?postcode="
+	menuURL      = "https://api.pizzahut.io/v1/content/products?sector=uk-1&locale=en-gb"
+	discountsURL = "https://api.pizzahut.io/v1/content/products?sector=uk-1&locale=en-gb"
+)
+
+type Store struct {
+	ID string `json:"id"`
 }
 
-func pizzahutStoreLocator(postcode string) (string, error) {
-	// Construct URL endpoint.
-	endpoint := "https://api.pizzahut.io/v1/huts?postcode=" + postcode
+// getStoreDetails returns the ID of the store closest to the postcoce given
+// if there is no store available then assume that one cannot deliver.
+func getStoreID(postcode string) (string, error) {
+	endpoint := storeURL + postcode
 
-	// Make a request to the endpoint.
 	body := request.UserAgentGetReq(endpoint)
 
-	// Put the JSON data into a struct.
-	sd := []PizzahutDetails{}
-	err := json.Unmarshal([]byte(body), &sd)
+	store := []Store{} // needs to be an array to unmarshal
+	err := json.Unmarshal([]byte(body), &store)
 	if err != nil {
 		log.Fatal(err)
-		return sd[0].StoreID, err
+		return store[0].ID, err
 	}
-	// The first store is the one available for delivery.
-	if len(sd) == 0 {
+
+	if store[0].ID == "" {
 		return "", errors.New("error : delivery not available for this postcode")
 	}
 
-	return sd[0].StoreID, nil
+	return store[0].ID, nil
 }
 
-type PizzahutMenuItem struct {
-	Id        string  `json:"id"`
+type MenuItem struct {
+	ID        string  `json:"id"`
 	Title     string  `json:"title"`
 	Desc      string  `json:"desc"`
 	Type      string  `json:"productType"`
@@ -43,91 +48,142 @@ type PizzahutMenuItem struct {
 	Price     float64 `json:"price"`
 }
 
-func getPizzahutMenu(menu chan<- []PizzahutMenuItem) {
-	// Make ednpoint
-	endpoint := "https://api.pizzahut.io/v1/content/products?sector=uk-1&locale=en-gb"
-	// Make a request to the Menu
-	body := request.UserAgentGetReq(endpoint)
+// getMenu will return all of the pizzahut menu items.
+func getMenu(menuChan chan<- []MenuItem) {
+	body := request.UserAgentGetReq(menuURL)
+
+	menu := []MenuItem{}
+	err := json.Unmarshal([]byte(body), &menu)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	menuChan <- menu
+}
+
+type DiscountItem struct {
+	ID         string  `json:"id"`
+	Discount   float64 `json:"amount"`
+	Collection bool    `json:"collection"`
+	Delivery   bool    `json:"threshold"`
+	Rule       string  `json:"rule"`
+}
+
+// getDiscounts will return all of the pizzahut discount codes and vouchers.
+func getDiscounts(discountChan chan<- []DiscountItem) {
+	body := request.UserAgentGetReq(discountsURL)
 
 	// Put the data into a struct.
-	sd := []PizzahutMenuItem{}
-	err := json.Unmarshal([]byte(body), &sd)
+	discounts := []DiscountItem{}
+	err := json.Unmarshal([]byte(body), &discounts)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get the menu ready for elsewhere.
-	menu <- sd
+	discountChan <- discounts
 }
 
-type PizzahutDeals struct {
-	Id       string  `json:"id"`
-	Price    float32 `json:"price"`
+type Deals struct {
+	ID       string  `json:"id"`
+	Price    float64 `json:"price"`
 	Hidden   bool    `json:"hidden"`
-	Delivery bool    `json:""`
+	Locked   bool    `json:"locked"`
+	Delivery bool    `json:"delivery"`
 }
 
-func GetPizzahutDeals(postcode string) ([]PizzahutMenuItem, error) {
-	menu := make(chan []PizzahutMenuItem)
-	// Make a request to get the Menu endpoint. This will be used in conjuction with the other request.
-	go getPizzahutMenu(menu)
-	// Construct the endpoint.
-	storeData, err := pizzahutStoreLocator(postcode)
-	if err != nil {
-		// fmt.Print(err)
-		return nil, err
-	}
-	endpoint := "https://api.pizzahut.io/v2/products/deals?hutid=" + storeData + "&sector=uk-1&delivery=true"
+// getAllDeals will extract all the deals that the API returns for the given storeID
+// however not all of these deals will be available to the user so some further filtering is requited.
+func getAllDeals(storeID string) ([]Deals, error) {
+	endpoint := "https://api.pizzahut.io/v2/products/deals?hutid=" + storeID + "&sector=uk-1&delivery=true"
 
-	// Make a request to the endpoint. This endpoint will receive ID's for menu items.
 	body := request.UserAgentGetReq(endpoint)
 
-	// Put the data into a struct.
-	uSd := []PizzahutDeals{}
-	err = json.Unmarshal([]byte(body), &uSd)
+	deals := []Deals{}
+	err := json.Unmarshal([]byte(body), &deals)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
-	// API filtering is limited. So have to do some cleaning here.
-	var sd []PizzahutDeals
-	for _, v := range uSd {
-		// Some deals that are not available are still in the json dump.
-		// Filter out the hidden deals.
-		if !v.Hidden {
-			sd = append(sd, v)
+	return deals, nil
+}
+
+// filterAvailableDeals will return the deals that are available to the customer.
+func filterAvailableDeals(deals []Deals) []Deals {
+	availableDeals := make([]Deals, 0)
+
+	for _, deal := range deals {
+		if !deal.Hidden && !deal.Locked {
+			availableDeals = append(availableDeals, deal)
 		}
 	}
+	return availableDeals
+}
 
-	// Use the Filtered ID's to retrieve the menu items. Wait for allItems to arrive.
-	var availableItems []PizzahutMenuItem
-	for _, v := range <-menu {
-		for _, v2 := range sd {
-			if v.Id == v2.Id && (v.Type == "deal" || v.OtherType == "deal") {
-				availableItems = append(availableItems, v)
-				break
+// lookupDealData will find the deal description, price and other important metadata
+// it will return menu items are these are more detailed
+// this sucks but the pizzahut api has forced my hand.
+// this probably be optimised, but for now fuck it.
+func lookupDealData(deals []Deals, menu []MenuItem) []MenuItem {
+	availableDealData := make([]MenuItem, 0)
+
+	// iterate over every deal
+	for _, deal := range deals {
+		// iterate over every item in the menu
+		for _, item := range menu {
+			// if the deal is in the menu extract the data that is needed.
+			if item.ID == deal.ID { //  && (item.Type == "deal" || item.OtherType == "deal")
+				// add required metadata
+				item.Price = deal.Price
+				availableDealData = append(availableDealData, item)
 			}
 		}
 	}
 
-	//TODO:
-	// The current approach leaves duplicates, remove these for now
-	availableItems = unique(availableItems)
+	return availableDealData
+}
 
-	return availableItems, nil
+// lookupDiscountData will find the discount description, price and other important metadata
+// func lookupDiscountData(deals []Deals, discounts []DiscountItem) []MenuItem {
+// 	return nil
+// }
+
+func GetDeals(postcode string) ([]MenuItem, error) {
+	menuChan := make(chan []MenuItem)
+	// discountChan := make(chan []DiscountItem)
+
+	// fetch all of the items and discount codes.
+	go getMenu(menuChan)
+	// go getDiscounts(discountChan)
+
+	storeID, err := getStoreID(postcode)
+	if err != nil {
+		return nil, err
+	}
+
+	allDeals, err := getAllDeals(storeID)
+	if err != nil {
+		return nil, err
+	}
+
+	availableDeals := filterAvailableDeals(allDeals)
+
+	dealData := lookupDealData(availableDeals, <-menuChan)
+	// discountData := lookupDiscountData(availableDeals, <-discountChan)
+
+	return dealData, nil
 }
 
 // https://stackoverflow.com/questions/57706801/deduplicate-array-of-structs
-func unique(sample []PizzahutMenuItem) []PizzahutMenuItem {
-	var unique []PizzahutMenuItem
+func unique(sample []MenuItem) []MenuItem {
+	var unique []MenuItem
 
 	type key struct{ value1, value2 string }
 
 	m := make(map[key]int)
 
 	for _, v := range sample {
-		k := key{strings.ToLower(v.Desc), v.Id}
+		k := key{strings.ToLower(v.Desc), v.ID}
 		if i, ok := m[k]; ok {
 			// Overwrite previous value per requirement in
 			// question to keep last matching value.
@@ -141,3 +197,9 @@ func unique(sample []PizzahutMenuItem) []PizzahutMenuItem {
 	}
 	return unique
 }
+
+// TODO:
+// isStudent
+// Discounts
+// NHS
+// Collection and Delivery is seperate API call like wtf...

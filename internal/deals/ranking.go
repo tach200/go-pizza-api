@@ -52,6 +52,11 @@ var (
 		"Medium": 11,
 		"large":  14,
 		"Large":  14,
+		// Used to filter out junk
+		"side":     0,
+		"Side":     0,
+		"toppings": 0,
+		"Toppings": 0,
 	}
 )
 
@@ -147,12 +152,16 @@ func convertToScoreArr(keywords []string, pizzaSizes map[string]float64) ([]keyw
 
 // calculateScoreArr calculates the final score.
 func calculateScoreArr(scoreArr []keywordType, dealCost float64) (float64, error) {
+	if dealCost == 0 {
+		return -1, errors.New("error: couldn't rank deal")
+	}
+
 	multiplyNextVal := false
 	valueToMultiply := 0.00
 	inchesOfPizza := 0.00
 
 	for _, val := range scoreArr {
-		if multiplyNextVal {
+		if multiplyNextVal && !val.multiplier {
 			inchesOfPizza += (valueToMultiply * val.value)
 			valueToMultiply = 0
 			continue

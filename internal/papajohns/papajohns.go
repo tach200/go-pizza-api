@@ -2,6 +2,7 @@ package papajohns
 
 import (
 	"encoding/json"
+	"fmt"
 	"go-pizza-api/internal/request"
 	"strconv"
 	"time"
@@ -49,14 +50,17 @@ func getStoreInfo(postcode string) (StoreInfo, error) {
 }
 
 type Deal struct {
-	DisplayName string   `json:"name"`
-	PromoURL    string   `json:"promo"`
-	Desc        string   `json:"description"`
-	Displayed   bool     `json:"showOnDealsPage"`
-	Available   int      `json:"availability"`
-	Price       float64  `json:"price"`
-	Schedule    Schedule `json:"schedule"`
-	StudentDeal bool     `json:"studentDeal"`
+	DisplayName    string   `json:"name"`
+	PromoURL       string   `json:"promo"`
+	Desc           string   `json:"description"`
+	Displayed      bool     `json:"showOnDealsPage"`
+	Available      int      `json:"availability"`
+	Price          float64  `json:"price"`
+	Schedule       Schedule `json:"schedule"`
+	StudentDeal    bool     `json:"studentDeal"`
+	ReductionType  string   `json:"reductionType"`
+	Reduction      float64  `json:"reduction"`
+	ShippingMethod int      `json:"shippingMethod"`
 }
 
 type Schedule struct {
@@ -91,7 +95,7 @@ func GetDeals(postcode string) ([]Deal, error) {
 func scheduleFilter(allDeals []Deal) []Deal {
 	var availableDeals []Deal
 
-	// fmt.Print(allDeals)
+	fmt.Print(allDeals)
 
 	for _, deal := range allDeals {
 		if len(deal.Schedule.DaysOfWeek) == 0 {

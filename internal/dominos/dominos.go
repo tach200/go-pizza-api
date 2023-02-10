@@ -109,3 +109,6 @@ func GetDominosDealsVouchers(postcode string) ([]DominosStoreDeals, Vouchers, er
 
 	return <-dealsChan, <-voucherChan, nil
 }
+
+// TODO: Get Discount, Get Cost
+// Dominos API doesn't include this information
