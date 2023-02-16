@@ -40,6 +40,8 @@ func getStoreInfo(postcode string) (StoreInfo, error) {
 
 	body := request.PapaGet(endpoint)
 
+	fmt.Println(string(body))
+
 	storeData := StoreInfo{}
 	err := json.Unmarshal([]byte(body), &storeData)
 	if err != nil {

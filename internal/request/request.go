@@ -54,6 +54,9 @@ func DominosGet(endpoint string) []byte {
 func PapaGet(endpoint string) []byte {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Add("User-Agent", UserAgent)
+	req.Header.Add("Accept", "application/json, text/plain, */*")
+	req.Header.Add("Accept-Language", "en-GB,en;q=0.5")
 	resp, err := client.Do(req)
 
 	if err != nil {
