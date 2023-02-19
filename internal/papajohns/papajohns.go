@@ -2,7 +2,6 @@ package papajohns
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-pizza-api/internal/request"
 	"strconv"
 	"time"
@@ -39,8 +38,6 @@ func getStoreInfo(postcode string) (StoreInfo, error) {
 	endpoint := storeEndpoint + postcode
 
 	body := request.PapaGet(endpoint)
-
-	fmt.Println(string(body))
 
 	storeData := StoreInfo{}
 	err := json.Unmarshal([]byte(body), &storeData)
@@ -96,8 +93,6 @@ func GetDeals(postcode string) ([]Deal, error) {
 // scheduleFilter will remove deals that are not available
 func scheduleFilter(allDeals []Deal) []Deal {
 	var availableDeals []Deal
-
-	fmt.Print(allDeals)
 
 	for _, deal := range allDeals {
 		if len(deal.Schedule.DaysOfWeek) == 0 {
