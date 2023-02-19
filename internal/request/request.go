@@ -9,49 +9,7 @@ import (
 // User agent is required otherwise the request cannot be made
 const UserAgent string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:91.0) Gecko/20100101 Firefox/91.0"
 
-// Added function in an attempt to clean up the code a little bit.
-func UserAgentGetReq(endpoint string) []byte {
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Add("User-Agent", UserAgent)
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := client.Do(req)
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	return body
-}
-
-// to be fair this method might work for all other requests.
-// dominos is really strict with the requests that are made
-func DominosGet(endpoint string) []byte {
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Add("User-Agent", UserAgent)
-	req.Header.Add("Accept", "application/json, text/plain, */*")
-	req.Header.Add("Accept-Language", "en-GB,en;q=0.5")
-	resp, err := client.Do(req)
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	return body
-}
-
-func PapaGet(endpoint string) []byte {
+func Get(endpoint string) []byte {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("User-Agent", UserAgent)

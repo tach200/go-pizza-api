@@ -3,15 +3,19 @@ package pizzahut
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go-pizza-api/internal/request"
 	"log"
+	"regexp"
 	"strings"
 )
 
 const (
+	// URLs
 	storeURL = "https://api.pizzahut.io/v1/huts?postcode="
 	menuURL  = "https://api.pizzahut.io/v1/content/products?sector=uk-1&locale=en-gb"
+
+	// Regex
+	pizzaSizeRegx = "(?m)(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge"
 )
 
 type Store struct {
@@ -23,7 +27,7 @@ type Store struct {
 func getStoreID(postcode string) (string, error) {
 	endpoint := storeURL + postcode
 
-	body := request.UserAgentGetReq(endpoint)
+	body := request.Get(endpoint)
 
 	store := []Store{} // needs to be an array to unmarshal
 	err := json.Unmarshal([]byte(body), &store)
@@ -40,17 +44,19 @@ func getStoreID(postcode string) (string, error) {
 }
 
 type MenuItem struct {
-	ID        string  `json:"id"`
-	Title     string  `json:"title"`
-	Desc      string  `json:"desc"`
-	Type      string  `json:"productType"`
-	OtherType string  `json:"type"`
-	Price     float64 `json:"price"`
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Desc        string  `json:"desc"`
+	Type        string  `json:"productType"`
+	OtherType   string  `json:"type"`
+	Price       float64 `json:"price"`
+	Reduction   float64 `json:"amount"`
+	DealContent []DealContent
 }
 
 // getMenu will return all of the pizzahut menu items.
 func getMenu(menuChan chan<- []MenuItem) {
-	body := request.UserAgentGetReq(menuURL)
+	body := request.Get(menuURL)
 
 	menu := []MenuItem{}
 	err := json.Unmarshal([]byte(body), &menu)
@@ -62,13 +68,14 @@ func getMenu(menuChan chan<- []MenuItem) {
 }
 
 type DiscountItem struct {
-	ID         string  `json:"id"`
-	Discount   float64 `json:"amount"`
-	Collection bool    `json:"collection"`
-	Delivery   bool    `json:"delivery"`
-	Rule       string  `json:"rule"`
-	Hidden     bool    `json:"hidden"`
-	Locked     bool    `json:"locked"`
+	ID                 string  `json:"id"`
+	Reduction          float64 `json:"amount"`
+	CostBeforeDiscount float64 `json:"threshold"`
+	Collection         bool    `json:"collection"`
+	Delivery           bool    `json:"delivery"`
+	Rule               string  `json:"rule"`
+	Hidden             bool    `json:"hidden"`
+	Locked             bool    `json:"locked"`
 }
 
 // getDiscounts will return all of the pizzahut discount codes and vouchers.
@@ -76,13 +83,12 @@ func getDiscounts(storeID string, discountChan chan<- []DiscountItem) {
 
 	endpoint := "https://api.pizzahut.io/v2/products/discounts?hutid=" + storeID + "&sector=uk-1&delivery=true"
 
-	body := request.UserAgentGetReq(endpoint)
+	body := request.Get(endpoint)
 
 	discounts := []DiscountItem{}
 	err := json.Unmarshal([]byte(body), &discounts)
 	if err != nil {
 		discountChan <- []DiscountItem{}
-		fmt.Print("error: couldn't unmarshal data")
 		return
 	}
 
@@ -91,11 +97,18 @@ func getDiscounts(storeID string, discountChan chan<- []DiscountItem) {
 }
 
 type Deals struct {
-	ID       string  `json:"id"`
-	Price    float64 `json:"price"`
-	Hidden   bool    `json:"hidden"`
-	Locked   bool    `json:"locked"`
-	Delivery bool    `json:"delivery"`
+	ID          string        `json:"id"`
+	Price       float64       `json:"price"`
+	Hidden      bool          `json:"hidden"`
+	Locked      bool          `json:"locked"`
+	Delivery    bool          `json:"delivery"`
+	DealContent []DealContent `json:"options"`
+}
+
+type DealContent struct {
+	Count     int    `json:"count"`
+	PizzaSize string `json:"pizzaSize"`
+	Type      string `json:"type"`
 }
 
 // getAllDeals will extract all the deals that the API returns for the given storeID
@@ -103,7 +116,7 @@ type Deals struct {
 func getAllDeals(storeID string, dealsChan chan<- []Deals) {
 	endpoint := "https://api.pizzahut.io/v2/products/deals?hutid=" + storeID + "&sector=uk-1&delivery=true"
 
-	body := request.UserAgentGetReq(endpoint)
+	body := request.Get(endpoint)
 
 	deals := []Deals{}
 	err := json.Unmarshal([]byte(body), &deals)
@@ -127,6 +140,7 @@ func filterAvailableDeals(deals []Deals) []Deals {
 	return availableDeals
 }
 
+// filterAvailableDeals will return the discounts that are available to the customer.
 func filterAvailableDiscounts(discounts []DiscountItem) []DiscountItem {
 	availableDiscount := make([]DiscountItem, 0)
 
@@ -140,9 +154,8 @@ func filterAvailableDiscounts(discounts []DiscountItem) []DiscountItem {
 }
 
 // lookupDealData will find the deal description, price and other important metadata
-// it will return menu items are these are more detailed
-// this sucks but the pizzahut api has forced my hand.
-// this probably be optimised, but for now fuck it.
+// it will return menu items are these are more detailed.
+// TODO: Refactor...
 func lookupDealData(deals []Deals, menu []MenuItem) []MenuItem {
 	availableDealData := make([]MenuItem, 0)
 
@@ -151,10 +164,24 @@ func lookupDealData(deals []Deals, menu []MenuItem) []MenuItem {
 		// iterate over every item in the menu
 		for _, item := range menu {
 			// if the deal is in the menu extract the data that is needed.
-			if item.ID == deal.ID { //  && (item.Type == "deal" || item.OtherType == "deal")
-				// add required metadata
+			if item.ID == deal.ID {
+				// Add metadata
 				item.Price = deal.Price
+
+				dealContent := make([]DealContent, 0)
+
+				for _, d := range deal.DealContent {
+					if d.Type == "pizza" {
+						size := getPizzaSize(item.Desc)
+						d.PizzaSize = size
+					}
+					dealContent = append(dealContent, d)
+				}
+
+				item.DealContent = dealContent
+
 				availableDealData = append(availableDealData, item)
+				break
 			}
 		}
 	}
@@ -174,8 +201,10 @@ func lookupDiscountData(discounts []DiscountItem, menu []MenuItem) []MenuItem {
 			// if the deal is in the discount extract the data that is needed.
 			if item.ID == disc.ID { //  && (item.Type == "deal" || item.OtherType == "deal")
 				// add required metadata
-				item.Price = disc.Discount
+				item.Price = disc.CostBeforeDiscount
+				item.Reduction = disc.Reduction
 				availableDiscountData = append(availableDiscountData, item)
+				break
 			}
 		}
 	}
@@ -212,9 +241,7 @@ func GetDeals(postcode string) ([]MenuItem, []MenuItem, error) {
 }
 
 // https://stackoverflow.com/questions/57706801/deduplicate-array-of-structs
-// TODO: Simplify this function
-// unique is required because of the pizzahut api being a pile of wank
-// need to remove duplicated deals.
+// Duplicate deals are returned, so make them unique.
 func unique(sample []MenuItem) []MenuItem {
 	var unique []MenuItem
 
@@ -225,12 +252,8 @@ func unique(sample []MenuItem) []MenuItem {
 	for _, v := range sample {
 		k := key{strings.ToLower(v.ID)}
 		if i, ok := m[k]; ok {
-			// Overwrite previous value per requirement in
-			// question to keep last matching value.
 			unique[i] = v
 		} else {
-			// Unique key found. Record position and collect
-			// in result.
 			m[k] = len(unique)
 			unique = append(unique, v)
 		}
@@ -238,8 +261,23 @@ func unique(sample []MenuItem) []MenuItem {
 	return unique
 }
 
+// getPizzaSize finds out what size pizza is included in this deal.
+func getPizzaSize(desc string) string {
+	regx := regexp.MustCompile(pizzaSizeRegx)
+
+	size := regx.FindString(desc)
+	if size == "" {
+		return "unknown"
+	}
+
+	return size
+}
+
+// addPizzaSizes will add the correct size pizza to the deal content.
+// func (d *DealContent) addPizzaSize(desc string) {
+
+// 	fmt.Printf("%+v", d)
+// }
+
 // TODO:
-// isStudent
-// Discounts
-// NHS
-// Collection and Delivery is seperate API call like wtf...
+// Collection and Delivery is seperate API call

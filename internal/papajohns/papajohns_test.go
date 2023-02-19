@@ -16,7 +16,7 @@ func Test_getStoreInfo(t *testing.T) {
 		},
 	}
 
-	got, err := getStoreInfo("me46ea")
+	got, err := getStoreID("me46ea")
 	assert.Nil(t, err)
 	assert.Equal(t, want, got)
 }

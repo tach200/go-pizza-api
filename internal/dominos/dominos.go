@@ -2,9 +2,14 @@ package dominos
 
 import (
 	"encoding/json"
+	"errors"
 	"go-pizza-api/internal/request"
+	"regexp"
 	"strconv"
+	"strings"
 )
+
+const percentRegex = "(\\d+(\\.\\d+)?%)"
 
 // Structs Hold information about the store
 type StoreData struct {
@@ -17,15 +22,11 @@ type Stores struct {
 	Store StoreData `json:"localStore"`
 }
 
-func dominoStoreLocator(postcode string) (StoreData, error) {
-	// Construct the endpoint URL.
+func getStoreID(postcode string) (StoreData, error) {
 	endpoint := "https://www.dominos.co.uk/storefindermap/storesearch?searchText=" + postcode
-	// fmt.Println("dominos store locator endpoint: " + endpoint)
 
-	// Create the client and send a request to the endpoint.
-	body := request.DominosGet(endpoint)
+	body := request.Get(endpoint)
 
-	// Populate structs with requests response.
 	sd := Stores{}
 	err := json.Unmarshal([]byte(body), &sd)
 	if err != nil {
@@ -46,18 +47,21 @@ type DominosDeals struct {
 }
 
 type DominosDeal struct {
-	Desc  string  `json:"description"`
-	Id    int     `json:"id"`
-	Price float64 `json:"price"`
+	Desc        string        `json:"description"`
+	Id          int           `json:"id"`
+	Price       float64       `json:"price"`
+	DealContent []DealContent `json:"steps"`
 }
 
-func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID string) {
+type DealContent struct {
+	Product string `json:"imageUrl"`
+}
+
+func getDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID string) {
 
 	endpoint := "https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=" + menuID + "&fulfilmentMethod=1&isoCode=en-GB&storeId=" + storeID
 
-	body := request.DominosGet(endpoint)
-
-	// fmt.Printf("Dominos Deals Body : %s", string(body))
+	body := request.Get(endpoint)
 
 	sd := []DominosStoreDeals{}
 	err := json.Unmarshal([]byte(body), &sd)
@@ -65,21 +69,22 @@ func GetDominosDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID strin
 		dealsChan <- []DominosStoreDeals{}
 	}
 
-	// fmt.Printf("Dominos Deals : %+v", sd)
-
 	dealsChan <- sd
 }
 
 type Vouchers []struct {
-	Desc string `json:"description"`
+	Desc     string   `json:"description"`
+	MinSpend MinSpend `json:"minimumSpend"`
 }
 
-func GetDominosVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
+type MinSpend struct {
+	Amount float64 `json:"amount"`
+}
+
+func getVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
 	endpoint := "https://www.dominos.co.uk/Deals/StoreDealsVouchers?fulfilmentMethod=1&storeId=" + storeID + "&v=120.1.0.8&vouchersOnlineVersion=" + menuID
 
-	body := request.DominosGet(endpoint)
-
-	// fmt.Printf("Dominos Vouchers Body : %s", string(body))
+	body := request.Get(endpoint)
 
 	vouchers := Vouchers{}
 	err := json.Unmarshal([]byte(body), &vouchers)
@@ -87,28 +92,45 @@ func GetDominosVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
 		voucherChan <- Vouchers{}
 	}
 
-	// fmt.Printf("Dominos Vouchers : %+v", vouchers)
-
 	voucherChan <- vouchers
 }
 
-func GetDominosDealsVouchers(postcode string) ([]DominosStoreDeals, Vouchers, error) {
-	// fmt.Println("GetDominosDealsVouchers called")
+// GetAllSavings gets deals and vouchers from dominos
+func GetAllSavings(postcode string) ([]DominosStoreDeals, Vouchers, error) {
 	dealsChan := make(chan []DominosStoreDeals, 1)
 	voucherChan := make(chan Vouchers, 1)
 
-	storeData, err := dominoStoreLocator(postcode)
+	storeData, err := getStoreID(postcode)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// fmt.Printf("Dominos Store Data : %+v", storeData)
-
-	go GetDominosDeals(dealsChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
-	go GetDominosVouchers(voucherChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
+	go getDeals(dealsChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
+	go getVouchers(voucherChan, strconv.Itoa(storeData.MenuId), strconv.Itoa(storeData.Id))
 
 	return <-dealsChan, <-voucherChan, nil
 }
 
-// TODO: Get Discount, Get Cost
-// Dominos API doesn't include this information
+// GetReduction uses a regular expression to extract the reduction amount from the deal
+// this is because dominos doesn't expose that data in the api in a conveinent format
+// because the data is extracted from a string it also needs to be converted to a float
+// for easier arithmetic.
+func GetReduction(desc string) (float64, error) {
+	regx := regexp.MustCompile(percentRegex)
+
+	reductionStr := regx.FindString(desc)
+
+	if reductionStr == "" {
+		return -1, errors.New("no keywords extracted from text")
+	}
+
+	// ready the string for conversion to float
+	reductionStr = strings.Trim(reductionStr, "%")
+
+	reduction, err := strconv.ParseFloat(reductionStr, 64)
+	if err != nil {
+		return -1, err
+	}
+
+	return reduction, nil
+}

@@ -9,7 +9,7 @@ import (
 
 const (
 	storeEndpoint = "https://api2.papajohns.co.uk/api/v1/Store/delivery/"
-	dealsEndpoint = "https://api2.papajohns.co.uk/api/v1/deal/"
+	dealsEndpoint = "https://api2.papajohns.co.uk/api/v1/deal/" //440
 )
 
 var (
@@ -34,10 +34,10 @@ type StoreInfo struct {
 
 // getStoreInfo returns information about the store closest to that postcode
 // this information can be used to populate other endpoint information.
-func getStoreInfo(postcode string) (StoreInfo, error) {
+func getStoreID(postcode string) (StoreInfo, error) {
 	endpoint := storeEndpoint + postcode
 
-	body := request.PapaGet(endpoint)
+	body := request.Get(endpoint)
 
 	storeData := StoreInfo{}
 	err := json.Unmarshal([]byte(body), &storeData)
@@ -49,17 +49,23 @@ func getStoreInfo(postcode string) (StoreInfo, error) {
 }
 
 type Deal struct {
-	DisplayName    string   `json:"name"`
-	PromoURL       string   `json:"promo"`
-	Desc           string   `json:"description"`
-	Displayed      bool     `json:"showOnDealsPage"`
-	Available      int      `json:"availability"`
-	Price          float64  `json:"price"`
-	Schedule       Schedule `json:"schedule"`
-	StudentDeal    bool     `json:"studentDeal"`
-	ReductionType  string   `json:"reductionType"`
-	Reduction      float64  `json:"reduction"`
-	ShippingMethod int      `json:"shippingMethod"`
+	DisplayName    string        `json:"name"`
+	PromoURL       string        `json:"promo"`
+	Desc           string        `json:"description"`
+	Displayed      bool          `json:"showOnDealsPage"`
+	Available      int           `json:"availability"`
+	Price          float64       `json:"price"`
+	Schedule       Schedule      `json:"schedule"`
+	StudentDeal    bool          `json:"studentDeal"`
+	ReductionType  string        `json:"reductionType"`
+	Reduction      float64       `json:"reduction"`
+	ShippingMethod int           `json:"shippingMethod"`
+	MinimumSpend   float64       `json:"minimumSpend"`
+	DealContent    []DealContent `json:"elements"`
+}
+
+type DealContent struct {
+	Product string `json:"description"`
 }
 
 type Schedule struct {
@@ -72,14 +78,14 @@ type Deals struct {
 
 // getDeals returns the deals that are available in the given store.
 func GetDeals(postcode string) ([]Deal, error) {
-	storeID, err := getStoreInfo(postcode)
+	storeID, err := getStoreID(postcode)
 	if err != nil {
 		return []Deal{}, err
 	}
 
 	endpoint := dealsEndpoint + strconv.Itoa(storeID.Data.ID)
 
-	body := request.PapaGet(endpoint)
+	body := request.Get(endpoint)
 
 	var deals Deals
 	err = json.Unmarshal([]byte(body), &deals)

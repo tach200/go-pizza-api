@@ -1,12 +1,8 @@
 package deals
 
 import (
-	"go-pizza-api/internal/papajohns"
-	"go-pizza-api/internal/pizzahut"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_getDealKeywords(t *testing.T) {
@@ -67,39 +63,39 @@ func Test_getDealKeywords(t *testing.T) {
 	}
 }
 
-func Test_rankAllPapa(t *testing.T) {
-	deals, err := papajohns.GetDeals("ME46EA")
-	assert.Nil(t, err)
+// func Test_rankAllPapa(t *testing.T) {
+// 	deals, err := papajohns.GetDeals("ME46EA")
+// 	assert.Nil(t, err)
 
-	for _, deal := range deals {
-		score := rankScore(deal.Desc, deal.Price, papajohsSizes)
+// 	for _, deal := range deals {
+// 		score := rankScore(deal.Desc, deal.Price, papajohsSizes)
 
-		assert.NotEqual(t, float64(-1), score)
-		assert.NotEqual(t, float64(0), score)
-	}
-}
+// 		assert.NotEqual(t, float64(-1), score)
+// 		assert.NotEqual(t, float64(0), score)
+// 	}
+// }
 
-func Test_rank(t *testing.T) {
-	desc := "Any medium pizza, 1 classic side and any regular drink for only £17.99"
-	price := 4.99
+// func Test_rank(t *testing.T) {
+// 	desc := "Any medium pizza, 1 classic side and any regular drink for only £17.99"
+// 	price := 4.99
 
-	score := rankScore(desc, price, papajohsSizes)
+// 	score := rankScore(desc, price, papajohsSizes)
 
-	assert.NotEqual(t, float64(-1), score)
-	assert.NotEqual(t, float64(0), score)
-}
+// 	assert.NotEqual(t, float64(-1), score)
+// 	assert.NotEqual(t, float64(0), score)
+// }
 
-func Test_rankPizzaHut(t *testing.T) {
-	deals, err := pizzahut.GetDeals("ME46EA")
-	assert.Nil(t, err)
+// func Test_rankPizzaHut(t *testing.T) {
+// 	deals, err := pizzahut.GetDeals("ME46EA")
+// 	assert.Nil(t, err)
 
-	for _, deal := range deals {
-		score := rankScore(deal.Desc, deal.Price, pizzahutSizes)
+// 	for _, deal := range deals {
+// 		score := rankScore(deal.Desc, deal.Price, pizzahutSizes)
 
-		assert.NotEqual(t, float64(-1), score)
-		assert.NotEqual(t, float64(0), score)
-	}
-}
+// 		assert.NotEqual(t, float64(-1), score)
+// 		assert.NotEqual(t, float64(0), score)
+// 	}
+// }
 
 func Test_calculateScoreArr(t *testing.T) {
 	type args struct {

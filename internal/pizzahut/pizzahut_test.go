@@ -9,7 +9,8 @@ import (
 func TestGetDeals(t *testing.T) {
 	postcode := "ME46EA"
 
-	deals, err := GetDeals(postcode)
+	pizzas, vouchers, err := GetDeals(postcode)
 	assert.Nil(t, err)
-	assert.IsType(t, []MenuItem{}, deals, "")
+	assert.IsType(t, []MenuItem{}, pizzas, "")
+	assert.IsType(t, []MenuItem{}, vouchers, "")
 }

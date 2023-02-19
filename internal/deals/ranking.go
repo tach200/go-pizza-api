@@ -67,7 +67,7 @@ type keywordType struct {
 
 // rankScore attempts to generate a value which reflects how good the deal iszoo
 // higher is better, but this is subject to change in the future.
-func rankScore(dealDesc string, cost float64, pizzaSizes map[string]float64) float64 {
+func rankDealScore(dealDesc string, cost float64, pizzaSizes map[string]float64) float64 {
 	keywords, err := getDealKeywords(dealDesc)
 	if err != nil {
 		// fmt.Printf("error: error finding deal keywords %s", err)
@@ -177,4 +177,15 @@ func calculateScoreArr(scoreArr []keywordType, dealCost float64) (float64, error
 	}
 
 	return (inchesOfPizza / dealCost), nil
+}
+
+func scoreDiscount(reduction, cost float64) (float64, float64) {
+	costAfterDiscount := costAfterDiscount(reduction, cost)
+	score := reduction - cost
+
+	return score, costAfterDiscount
+}
+
+func costAfterDiscount(reduction, cost float64) float64 {
+	return cost - (cost * reduction / 100)
 }
