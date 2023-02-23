@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"go-pizza-api/internal/request"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -115,4 +116,33 @@ func scheduleFilter(allDeals []Deal) []Deal {
 	}
 
 	return availableDeals
+}
+
+type Product struct {
+	ProductType  string
+	ProductCount int
+}
+
+func FormatProductData(dealContent []DealContent) []Product {
+	productData := make([]Product, 0)
+	prevProductName := ""
+
+	product := Product{}
+	prodCount := 0
+
+	for _, d := range dealContent {
+		if prevProductName != d.Product && prevProductName != "" {
+			productData = append(productData, product)
+			prodCount = 0
+		}
+
+		prodCount++
+		product.ProductType = strings.ToLower(d.Product)
+		product.ProductCount = prodCount
+		prevProductName = d.Product
+	}
+
+	productData = append(productData, product)
+
+	return productData
 }

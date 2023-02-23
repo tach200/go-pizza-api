@@ -134,3 +134,36 @@ func GetReduction(desc string) (float64, error) {
 
 	return reduction, nil
 }
+
+type Product struct {
+	ProductType  string
+	ProductCount int
+}
+
+func FormatProductData(dealContent []DealContent) []Product {
+	productData := make([]Product, 0)
+	prevProductName := ""
+
+	product := Product{}
+	prodCount := 0
+
+	for _, d := range dealContent {
+
+		// format the string
+		prodType := d.Product[27 : len(d.Product)-4]
+
+		if prevProductName != prodType && prevProductName != "" {
+			productData = append(productData, product)
+			prodCount = 0
+		}
+
+		prodCount++
+		product.ProductType = prodType
+		product.ProductCount = prodCount
+		prevProductName = prodType
+	}
+
+	productData = append(productData, product)
+
+	return productData
+}

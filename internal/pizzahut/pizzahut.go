@@ -108,7 +108,7 @@ type Deals struct {
 type DealContent struct {
 	Count     int    `json:"count"`
 	PizzaSize string `json:"pizzaSize"`
-	Type      string `json:"type"`
+	Product   string `json:"type"`
 }
 
 // getAllDeals will extract all the deals that the API returns for the given storeID
@@ -171,7 +171,7 @@ func lookupDealData(deals []Deals, menu []MenuItem) []MenuItem {
 				dealContent := make([]DealContent, 0)
 
 				for _, d := range deal.DealContent {
-					if d.Type == "pizza" {
+					if d.Product == "pizza" {
 						size := getPizzaSize(item.Desc)
 						d.PizzaSize = size
 					}
@@ -237,28 +237,7 @@ func GetDeals(postcode string) ([]MenuItem, []MenuItem, error) {
 	dealData := lookupDealData(availableDeals, menu)
 	discountData := lookupDiscountData(availableDiscounts, menu)
 
-	return unique(dealData), unique(discountData), nil
-}
-
-// https://stackoverflow.com/questions/57706801/deduplicate-array-of-structs
-// Duplicate deals are returned, so make them unique.
-func unique(sample []MenuItem) []MenuItem {
-	var unique []MenuItem
-
-	type key struct{ value string }
-
-	m := make(map[key]int)
-
-	for _, v := range sample {
-		k := key{strings.ToLower(v.ID)}
-		if i, ok := m[k]; ok {
-			unique[i] = v
-		} else {
-			m[k] = len(unique)
-			unique = append(unique, v)
-		}
-	}
-	return unique
+	return (dealData), (discountData), nil
 }
 
 // getPizzaSize finds out what size pizza is included in this deal.
@@ -273,11 +252,41 @@ func getPizzaSize(desc string) string {
 	return size
 }
 
-// addPizzaSizes will add the correct size pizza to the deal content.
-// func (d *DealContent) addPizzaSize(desc string) {
+type Product struct {
+	ProductType  string
+	ProductCount int
+}
 
-// 	fmt.Printf("%+v", d)
-// }
+func FormatProductData(dealContent []DealContent) []Product {
+	productData := make([]Product, 0)
+	prevProductName := ""
+
+	product := Product{}
+	prodCount := 0
+
+	for _, d := range dealContent {
+		if prevProductName != d.Product && prevProductName != "" {
+			productData = append(productData, product)
+			prodCount = 0
+		}
+
+		prodType := d.Product
+
+		// format pizza sizes into the product
+		if d.PizzaSize != "" {
+			prodType = strings.ToLower(d.PizzaSize) + " " + d.Product
+		}
+
+		prodCount += d.Count
+		product.ProductType = prodType
+		product.ProductCount = prodCount
+		prevProductName = d.Product
+	}
+
+	productData = append(productData, product)
+
+	return productData
+}
 
 // TODO:
 // Collection and Delivery is seperate API call
