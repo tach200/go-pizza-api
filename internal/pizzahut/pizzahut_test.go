@@ -1,6 +1,7 @@
 package pizzahut
 
 import (
+	"go-pizza-api/internal/ranking"
 	"reflect"
 	"testing"
 
@@ -23,7 +24,7 @@ func TestFormatProductData(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []Product
+		want []ranking.Product
 	}{
 		{
 			name: "test lol",
@@ -56,7 +57,7 @@ func TestFormatProductData(t *testing.T) {
 					},
 				},
 			},
-			want: []Product{
+			want: []ranking.Product{
 				{
 					ProductType:  "medium pizza",
 					ProductCount: 3,

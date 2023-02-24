@@ -2,6 +2,7 @@ package papajohns
 
 import (
 	"encoding/json"
+	"go-pizza-api/internal/ranking"
 	"go-pizza-api/internal/request"
 	"strconv"
 	"strings"
@@ -77,7 +78,7 @@ type Deals struct {
 	Deals []Deal `json:"data"`
 }
 
-// getDeals returns the deals that are available in the given store.
+// GetDeals returns the deals that are available in the given store.
 func GetDeals(postcode string) ([]Deal, error) {
 	storeID, err := getStoreID(postcode)
 	if err != nil {
@@ -118,28 +119,28 @@ func scheduleFilter(allDeals []Deal) []Deal {
 	return availableDeals
 }
 
-type Product struct {
-	ProductType  string
-	ProductCount int
-}
-
-func FormatProductData(dealContent []DealContent) []Product {
-	productData := make([]Product, 0)
+func FormatProductData(dealContent []DealContent, dealDesc string) []ranking.Product {
+	productData := make([]ranking.Product, 0)
 	prevProductName := ""
 
-	product := Product{}
+	product := ranking.Product{}
 	prodCount := 0
 
 	for _, d := range dealContent {
-		if prevProductName != d.Product && prevProductName != "" {
+		prodName := d.Product
+		if prodName == "Pizza" {
+			prodName = ranking.GetPizzaSize(dealDesc) + " Pizza"
+		}
+
+		if prevProductName != prodName && prevProductName != "" {
 			productData = append(productData, product)
 			prodCount = 0
 		}
 
 		prodCount++
-		product.ProductType = strings.ToLower(d.Product)
+		product.ProductType = strings.ToLower(prodName)
 		product.ProductCount = prodCount
-		prevProductName = d.Product
+		prevProductName = prodName
 	}
 
 	productData = append(productData, product)

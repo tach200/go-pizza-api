@@ -3,6 +3,7 @@ package dominos
 import (
 	"encoding/json"
 	"errors"
+	"go-pizza-api/internal/ranking"
 	"go-pizza-api/internal/request"
 	"regexp"
 	"strconv"
@@ -36,17 +37,15 @@ func getStoreID(postcode string) (StoreData, error) {
 	return sd.Store, nil
 }
 
-// Dominos deals data, data arrives in horrible format.
-// Structs are built for the JSON data
-type DominosStoreDeals struct {
-	StoreDeals []DominosDeals `json:"storeDeals"`
+type StoreDeals struct {
+	StoreDeals []Deals `json:"storeDeals"`
 }
-type DominosDeals struct {
-	Deal []DominosDeal `json:"deals"`
-	Name string        `json:"name"`
+type Deals struct {
+	Deal []Deal `json:"deals"`
+	Name string `json:"name"`
 }
 
-type DominosDeal struct {
+type Deal struct {
 	Desc        string        `json:"description"`
 	Id          int           `json:"id"`
 	Price       float64       `json:"price"`
@@ -57,16 +56,16 @@ type DealContent struct {
 	Product string `json:"imageUrl"`
 }
 
-func getDeals(dealsChan chan<- []DominosStoreDeals, menuID, storeID string) {
+func getDeals(dealsChan chan<- []StoreDeals, menuID, storeID string) {
 
 	endpoint := "https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=" + menuID + "&fulfilmentMethod=1&isoCode=en-GB&storeId=" + storeID
 
 	body := request.Get(endpoint)
 
-	sd := []DominosStoreDeals{}
+	sd := []StoreDeals{}
 	err := json.Unmarshal([]byte(body), &sd)
 	if err != nil {
-		dealsChan <- []DominosStoreDeals{}
+		dealsChan <- []StoreDeals{}
 	}
 
 	dealsChan <- sd
@@ -96,8 +95,8 @@ func getVouchers(voucherChan chan<- Vouchers, menuID, storeID string) {
 }
 
 // GetAllSavings gets deals and vouchers from dominos
-func GetAllSavings(postcode string) ([]DominosStoreDeals, Vouchers, error) {
-	dealsChan := make(chan []DominosStoreDeals, 1)
+func GetAllSavings(postcode string) ([]StoreDeals, Vouchers, error) {
+	dealsChan := make(chan []StoreDeals, 1)
 	voucherChan := make(chan Vouchers, 1)
 
 	storeData, err := getStoreID(postcode)
@@ -135,22 +134,19 @@ func GetReduction(desc string) (float64, error) {
 	return reduction, nil
 }
 
-type Product struct {
-	ProductType  string
-	ProductCount int
-}
-
-func FormatProductData(dealContent []DealContent) []Product {
-	productData := make([]Product, 0)
+func FormatProductData(dealContent []DealContent, dealDesc string) []ranking.Product {
+	productData := make([]ranking.Product, 0)
 	prevProductName := ""
 
-	product := Product{}
+	product := ranking.Product{}
 	prodCount := 0
 
 	for _, d := range dealContent {
 
-		// format the string
 		prodType := d.Product[27 : len(d.Product)-4]
+		if prodType == "pizza" {
+			prodType = strings.ToLower(ranking.GetPizzaSize(dealDesc)) + " pizza"
+		}
 
 		if prevProductName != prodType && prevProductName != "" {
 			productData = append(productData, product)

@@ -3,9 +3,9 @@ package pizzahut
 import (
 	"encoding/json"
 	"errors"
+	"go-pizza-api/internal/ranking"
 	"go-pizza-api/internal/request"
 	"log"
-	"regexp"
 	"strings"
 )
 
@@ -13,9 +13,6 @@ const (
 	// URLs
 	storeURL = "https://api.pizzahut.io/v1/huts?postcode="
 	menuURL  = "https://api.pizzahut.io/v1/content/products?sector=uk-1&locale=en-gb"
-
-	// Regex
-	pizzaSizeRegx = "(?m)(?i)\\bpersonal|\\bsmall|\\bmedium|\\blarge"
 )
 
 type Store struct {
@@ -172,7 +169,7 @@ func lookupDealData(deals []Deals, menu []MenuItem) []MenuItem {
 
 				for _, d := range deal.DealContent {
 					if d.Product == "pizza" {
-						size := getPizzaSize(item.Desc)
+						size := ranking.GetPizzaSize(item.Desc)
 						d.PizzaSize = size
 					}
 					dealContent = append(dealContent, d)
@@ -240,28 +237,11 @@ func GetDeals(postcode string) ([]MenuItem, []MenuItem, error) {
 	return (dealData), (discountData), nil
 }
 
-// getPizzaSize finds out what size pizza is included in this deal.
-func getPizzaSize(desc string) string {
-	regx := regexp.MustCompile(pizzaSizeRegx)
-
-	size := regx.FindString(desc)
-	if size == "" {
-		return "unknown"
-	}
-
-	return size
-}
-
-type Product struct {
-	ProductType  string
-	ProductCount int
-}
-
-func FormatProductData(dealContent []DealContent) []Product {
-	productData := make([]Product, 0)
+func FormatProductData(dealContent []DealContent) []ranking.Product {
+	productData := make([]ranking.Product, 0)
 	prevProductName := ""
 
-	product := Product{}
+	product := ranking.Product{}
 	prodCount := 0
 
 	for _, d := range dealContent {

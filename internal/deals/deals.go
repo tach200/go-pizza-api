@@ -1,7 +1,11 @@
 package deals
 
 import (
+	"go-pizza-api/internal/dominos"
+	"go-pizza-api/internal/papajohns"
 	"go-pizza-api/internal/pizzahut"
+	"go-pizza-api/internal/ranking"
+	"strconv"
 	"sync"
 )
 
@@ -19,6 +23,7 @@ type AllDeals struct {
 	StudentDeal    bool
 	CollectionOnly bool
 
+	// Scoring
 	Score float64
 
 	// Discounts
@@ -28,15 +33,13 @@ type AllDeals struct {
 
 	// Products
 	InchesOfPizza float64
-	Products      interface{}
+	Products      []ranking.Product
 }
 
 func GetDeals(postcode string) []AllDeals {
-	//Create list of structs to store clean data.
 	deals := []AllDeals{}
 	var wg sync.WaitGroup
-	// 3 requests need to be made
-	wg.Add(1)
+	wg.Add(3)
 
 	// Pizzahut
 	go func() {
@@ -48,7 +51,7 @@ func GetDeals(postcode string) []AllDeals {
 		for _, item := range pizzas {
 
 			products := pizzahut.FormatProductData(item.DealContent)
-			inchesOfPizza := calculateTotalInches(Product(products[0]), pizzahutSizes)
+			inchesOfPizza := ranking.CalculateTotalInches(products[0], ranking.PizzahutSizes)
 
 			deals = append(deals, AllDeals{
 				Restaurant: "Pizza Hut",
@@ -58,12 +61,12 @@ func GetDeals(postcode string) []AllDeals {
 				DealUrl:    "https://www.pizzahut.co.uk/order/deal/?id=" + item.ID,
 				DealType:   item.Type,
 				Products:   products,
-				Score:      scoreDeal(inchesOfPizza, item.Price),
+				Score:      ranking.ScoreDeal(inchesOfPizza, item.Price),
 			})
 		}
 		for _, disc := range discounts {
 
-			score, costAfterDiscount := scoreDiscount(disc.Reduction, disc.Price)
+			score, costAfterDiscount := ranking.ScoreDiscount(disc.Reduction, disc.Price)
 
 			deals = append(deals, AllDeals{
 				Restaurant:         "Pizza Hut",
@@ -79,96 +82,98 @@ func GetDeals(postcode string) []AllDeals {
 	}()
 
 	// Papajohns
-	// go func() {
-	// 	defer wg.Done()
-	// 	papaj, err := papajohns.GetDeals(postcode)
-	// 	if err != nil {
-	// 		return
-	// 	}
-	// 	for _, item := range papaj {
-	// 		if item.Displayed {
+	go func() {
+		defer wg.Done()
+		savings, err := papajohns.GetDeals(postcode)
+		if err != nil {
+			return
+		}
+		for _, item := range savings {
+			if item.Displayed {
 
-	// 			var collection bool
-	// 			// means collection
-	// 			if item.ShippingMethod == 1 {
-	// 				collection = true
-	// 			}
+				var collection bool
+				if item.ShippingMethod == 1 {
+					collection = true
+				}
 
-	// 			var products []papajohns.Product
-	// 			var score float64
-	// 			var costAfterDiscount = -1.00
+				var products []ranking.Product
+				var score float64
+				var costAfterDiscount = -1.00
 
-	// 			if item.ReductionType == "%" {
-	// 				score, costAfterDiscount = scoreDiscount(item.Reduction, item.MinimumSpend)
-	// 			} else {
-	// 				products = papajohns.FormatProductData(item.DealContent)
-	// 				score = rankDealScore(item.Desc, item.Price, papajohsSizes)
-	// 			}
+				if item.ReductionType == "%" {
+					score, costAfterDiscount = ranking.ScoreDiscount(item.Reduction, item.MinimumSpend)
+				} else {
+					products = papajohns.FormatProductData(item.DealContent, item.Desc)
 
-	// 			deals = append(deals, AllDeals{
-	// 				Restaurant:          "Papa Johns",
-	// 				DealName:            item.DisplayName,
-	// 				DealUrl:             "https://www.papajohns.co.uk/deals",
-	// 				DealDesc:            item.Desc,
-	// 				DealPrice:           item.Price,
-	// 				DealType:            item.ReductionType,
-	// 				StudentDeal:         item.StudentDeal,
-	// 				CollectionOnly:      collection,
-	// 				Discount:            item.Reduction,
-	// 				PriceAfterDiscount:  float64(costAfterDiscount),
-	// 				PriceBeforeDiscount: item.MinimumSpend, //field only present on % deals
-	// 				Products:            products,
-	// 				Score:               score,
-	// 			})
-	// 		}
-	// 	}
-	// }()
+					pizzaType := ranking.LookupPizza(products)
 
-	// // Dominos
-	// go func() {
-	// 	defer wg.Done()
-	// 	domnios, vouchers, err := dominos.GetAllSavings(postcode)
-	// 	if err != nil {
-	// 		return
-	// 	}
+					inchesOfPizza := ranking.CalculateTotalInches(pizzaType, ranking.PapajohsSizes)
+					score = ranking.ScoreDeal(inchesOfPizza, item.Price)
+				}
 
-	// 	for _, item := range domnios[0].StoreDeals {
-	// 		deals = append(deals, AllDeals{
-	// 			Restaurant:     "Domino's",
-	// 			DealName:       item.Name,
-	// 			DealUrl:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
-	// 			DealPrice:      item.Deal[0].Price,
-	// 			DealDesc:       item.Deal[0].Desc,
-	// 			DealType:       "",
-	// 			CollectionOnly: false,
-	// 			StudentDeal:    false,
-	// 			Products:       dominos.FormatProductData(item.Deal[0].DealContent),
-	// 			Score:          rankDealScore(item.Deal[0].Desc, item.Deal[0].Price, dominosSizes),
-	// 		})
-	// 	}
-	// 	for _, item := range vouchers {
+				deals = append(deals, AllDeals{
+					Restaurant:          "Papa Johns",
+					DealName:            item.DisplayName,
+					DealUrl:             "https://www.papajohns.co.uk/deals",
+					DealDesc:            item.Desc,
+					DealPrice:           item.Price,
+					DealType:            item.ReductionType,
+					StudentDeal:         item.StudentDeal,
+					CollectionOnly:      collection,
+					Discount:            item.Reduction,
+					PriceAfterDiscount:  float64(costAfterDiscount),
+					PriceBeforeDiscount: item.MinimumSpend, //field only present on % deals
+					Products:            products,
+					Score:               score,
+				})
+			}
+		}
+	}()
 
-	// 		reduction, err := dominos.GetReduction(item.Desc)
-	// 		if err != nil {
-	// 			return
-	// 		}
+	// Dominos
+	go func() {
+		defer wg.Done()
+		domnios, vouchers, err := dominos.GetAllSavings(postcode)
+		if err != nil {
+			return
+		}
 
-	// 		score, costAfterDiscount := scoreDiscount(reduction, item.MinSpend.Amount)
+		for _, item := range domnios[0].StoreDeals {
+			deals = append(deals, AllDeals{
+				Restaurant:     "Domino's",
+				DealName:       item.Name,
+				DealUrl:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
+				DealPrice:      item.Deal[0].Price,
+				DealDesc:       item.Deal[0].Desc,
+				DealType:       "",
+				CollectionOnly: false,
+				StudentDeal:    false,
+				Products:       dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc),
+				// Score:          ranking.ScoreDeal(, dominosSizes),
+			})
+		}
+		for _, item := range vouchers {
+			reduction, err := dominos.GetReduction(item.Desc)
+			if err != nil {
+				return
+			}
 
-	// 		deals = append(deals, AllDeals{
-	// 			Restaurant:          "Domino's",
-	// 			DealName:            "Savings Voucher",
-	// 			DealUrl:             "https://www.dominos.co.uk/deals",
-	// 			DealDesc:            item.Desc,
-	// 			DealType:            "%",
-	// 			CollectionOnly:      false,
-	// 			StudentDeal:         false,
-	// 			PriceBeforeDiscount: item.MinSpend.Amount,
-	// 			PriceAfterDiscount:  costAfterDiscount,
-	// 			Score:               score,
-	// 		})
-	// 	}
-	// }()
+			score, costAfterDiscount := ranking.ScoreDiscount(reduction, item.MinSpend.Amount)
+
+			deals = append(deals, AllDeals{
+				Restaurant:          "Domino's",
+				DealName:            "Savings Voucher",
+				DealUrl:             "https://www.dominos.co.uk/deals",
+				DealDesc:            item.Desc,
+				DealType:            "%",
+				CollectionOnly:      false,
+				StudentDeal:         false,
+				PriceBeforeDiscount: item.MinSpend.Amount,
+				PriceAfterDiscount:  costAfterDiscount,
+				Score:               score,
+			})
+		}
+	}()
 
 	wg.Wait()
 	return deals
