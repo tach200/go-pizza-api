@@ -1,6 +1,7 @@
 package ranking
 
 import (
+	"math"
 	"regexp"
 	"strings"
 )
@@ -59,7 +60,18 @@ func CalculateTotalInches(poduct Product, pizzaSizes map[string]float64) float64
 // ScoreDeal calculates the cost per inch of pizza, which is used
 // as a scoring function.
 func ScoreDeal(inchesOfPizza, price float64) float64 {
-	return (inchesOfPizza / price)
+
+	result := roundFloat((inchesOfPizza / price), 5)
+
+	if math.IsInf(result, 1) {
+		return -1
+	}
+
+	if math.IsInf(result, -1) {
+		return -1
+	}
+
+	return result
 }
 
 // GetPizzaSize finds out what size pizza is included in this deal
@@ -83,4 +95,9 @@ func LookupPizza(products []Product) Product {
 		}
 	}
 	return Product{}
+}
+
+func roundFloat(val float64, precision uint) float64 {
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(val*ratio) / ratio
 }

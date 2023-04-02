@@ -130,7 +130,7 @@ func GetDeals(postcode string) []AllDeals {
 		}
 	}()
 
-	// Dominos
+	// // Dominos
 	go func() {
 		defer wg.Done()
 		domnios, vouchers, err := dominos.GetAllSavings(postcode)
@@ -139,6 +139,11 @@ func GetDeals(postcode string) []AllDeals {
 		}
 
 		for _, item := range domnios[0].StoreDeals {
+
+			products := dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc)
+			pizzaType := ranking.LookupPizza(products)
+			inchesOfPizza := ranking.CalculateTotalInches(pizzaType, ranking.PapajohsSizes)
+
 			deals = append(deals, AllDeals{
 				Restaurant:     "Domino's",
 				DealName:       item.Name,
@@ -147,9 +152,9 @@ func GetDeals(postcode string) []AllDeals {
 				DealDesc:       item.Deal[0].Desc,
 				DealType:       "",
 				CollectionOnly: false,
-				StudentDeal:    false,
+				StudentDeal:    false, //TODO
 				Products:       dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc),
-				// Score:          ranking.ScoreDeal(, dominosSizes),
+				Score:          ranking.ScoreDeal(inchesOfPizza, item.Deal[0].Price),
 			})
 		}
 		for _, item := range vouchers {
