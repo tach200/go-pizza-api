@@ -33,6 +33,10 @@ func getStoreID(postcode string) (string, error) {
 		return store[0].ID, err
 	}
 
+	if len(store) == 0 {
+		return "", errors.New("error : delivery not available for this postcode")
+	}
+
 	if store[0].ID == "" {
 		return "", errors.New("error : delivery not available for this postcode")
 	}

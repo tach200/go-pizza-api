@@ -21,7 +21,7 @@ func main() {
 
 // Easier for quick local testing
 // func main() {
-// 	deals := deals.GetDeals("me46ea")
+// 	deals := deals.GetDeals("me50bz")
 // 	json, err := json.Marshal(deals)
 // 	if err != nil {
 // 		log.Fatal(err)

@@ -130,7 +130,7 @@ func GetDeals(postcode string) []AllDeals {
 		}
 	}()
 
-	// // Dominos
+	// Dominos
 	go func() {
 		defer wg.Done()
 		domnios, vouchers, err := dominos.GetAllSavings(postcode)
