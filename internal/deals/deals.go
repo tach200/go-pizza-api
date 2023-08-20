@@ -54,14 +54,16 @@ func GetDeals(postcode string) []AllDeals {
 			inchesOfPizza := ranking.CalculateTotalInches(products[0], ranking.PizzahutSizes)
 
 			deals = append(deals, AllDeals{
-				Restaurant: "Pizza Hut",
-				DealName:   item.Title,
-				DealDesc:   item.Desc,
-				DealPrice:  item.Price,
-				DealUrl:    "https://www.pizzahut.co.uk/order/deal/?id=" + item.ID,
-				DealType:   item.Type,
-				Products:   products,
-				Score:      ranking.ScoreDeal(inchesOfPizza, item.Price),
+				Restaurant:    "Pizza Hut",
+				DealName:      item.Title,
+				DealDesc:      item.Desc,
+				DealPrice:     item.Price,
+				DealUrl:       "https://www.pizzahut.co.uk/order/deal/?id=" + item.ID,
+				DealType:      "items",
+				Products:      products,
+				InchesOfPizza: inchesOfPizza,
+				StudentDeal:   pizzahut.IsStudentDeal(item.ID),
+				Score:         ranking.ScoreDeal(inchesOfPizza, item.Price),
 			})
 		}
 		for _, disc := range discounts {
@@ -133,30 +135,33 @@ func GetDeals(postcode string) []AllDeals {
 	// Dominos
 	go func() {
 		defer wg.Done()
-		domnios, vouchers, err := dominos.GetAllSavings(postcode)
+		doms, vouchers, err := dominos.GetAllSavings(postcode)
 		if err != nil {
 			return
 		}
 
-		for _, item := range domnios[0].StoreDeals {
+		for _, storeDeal := range doms {
+			for _, item := range storeDeal.StoreDeals {
 
-			products := dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc)
-			pizzaType := ranking.LookupPizza(products)
-			inchesOfPizza := ranking.CalculateTotalInches(pizzaType, ranking.PapajohsSizes)
+				products := dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc)
+				pizzaType := ranking.LookupPizza(products)
+				inchesOfPizza := ranking.CalculateTotalInches(pizzaType, ranking.PapajohsSizes)
 
-			deals = append(deals, AllDeals{
-				Restaurant:     "Domino's",
-				DealName:       item.Name,
-				DealUrl:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
-				DealPrice:      item.Deal[0].Price,
-				DealDesc:       item.Deal[0].Desc,
-				DealType:       "",
-				CollectionOnly: false,
-				StudentDeal:    false, //TODO
-				Products:       dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc),
-				Score:          ranking.ScoreDeal(inchesOfPizza, item.Deal[0].Price),
-			})
+				deals = append(deals, AllDeals{
+					Restaurant:     "Domino's",
+					DealName:       item.Name,
+					DealUrl:        "https://www.dominos.co.uk/deals/deal/" + strconv.Itoa(item.Deal[0].Id),
+					DealPrice:      item.Deal[0].Price,
+					DealDesc:       item.Deal[0].Desc,
+					DealType:       "product",
+					CollectionOnly: false,
+					StudentDeal:    false, // TODO
+					Products:       dominos.FormatProductData(item.Deal[0].DealContent, item.Deal[0].Desc),
+					Score:          ranking.ScoreDeal(inchesOfPizza, item.Deal[0].Price),
+				})
+			}
 		}
+
 		for _, item := range vouchers {
 			reduction, err := dominos.GetReduction(item.Desc)
 			if err != nil {

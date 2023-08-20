@@ -3,7 +3,6 @@ package dominos
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go-pizza-api/internal/ranking"
 	"go-pizza-api/internal/request"
 	"regexp"
@@ -58,12 +57,9 @@ type DealContent struct {
 }
 
 func getDeals(dealsChan chan<- []StoreDeals, menuID, storeID string) {
-
 	endpoint := "https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=" + menuID + "&fulfilmentMethod=1&isoCode=en-GB&storeId=" + storeID
 
 	body := request.Get(endpoint)
-
-	fmt.Print(string(body))
 
 	sd := []StoreDeals{}
 	err := json.Unmarshal([]byte(body), &sd)

@@ -71,6 +71,10 @@ func ScoreDeal(inchesOfPizza, price float64) float64 {
 		return -1
 	}
 
+	if result < 0 {
+		return -1
+	}
+
 	return result
 }
 

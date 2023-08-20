@@ -272,5 +272,12 @@ func FormatProductData(dealContent []DealContent) []ranking.Product {
 	return productData
 }
 
+// IsStudentDeal returns true if the deal is applicable for students
+//
+// This can be found out by seeing if the deal id contains the word student.
+func IsStudentDeal(dealID string) bool {
+	return strings.Contains(dealID, "student")
+}
+
 // TODO:
 // Collection and Delivery is seperate API call
