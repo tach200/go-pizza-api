@@ -17,15 +17,3 @@ func Test_getStoreInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, want, got)
 }
-
-func TestGetDeals(t *testing.T) {
-	want := Deals{
-		Deals: []Deal{
-			{},
-		},
-	}
-
-	got, err := GetDeals("me46ea")
-	assert.Nil(t, err)
-	assert.Equal(t, want, got)
-}

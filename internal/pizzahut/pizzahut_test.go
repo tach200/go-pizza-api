@@ -27,7 +27,7 @@ func TestFormatProductData(t *testing.T) {
 		want []ranking.Product
 	}{
 		{
-			name: "test lol",
+			name: "check that products are formatted",
 			args: args{
 				dealContent: []DealContent{
 					{
