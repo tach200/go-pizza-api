@@ -60,7 +60,6 @@ func CalculateTotalInches(poduct Product, pizzaSizes map[string]float64) float64
 // ScoreDeal calculates the cost per inch of pizza, which is used
 // as a scoring function.
 func ScoreDeal(inchesOfPizza, price float64) float64 {
-
 	result := roundFloat((inchesOfPizza / price), 5)
 
 	if math.IsInf(result, 1) {

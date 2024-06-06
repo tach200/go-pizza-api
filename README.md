@@ -1,3 +1,3 @@
-# go-pizza-api
+# Go Pizza
 
-some readme
+Go Pizza will lookup pizza deals in your local area.

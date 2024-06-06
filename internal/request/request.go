@@ -1,7 +1,7 @@
 package request
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 )
@@ -9,6 +9,8 @@ import (
 // User agent is required otherwise the request cannot be made
 const UserAgent string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:91.0) Gecko/20100101 Firefox/91.0"
 
+// Get makes a GET request to the specified endpoint, but includes all the required headers
+// for the project.
 func Get(endpoint string) []byte {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", endpoint, nil)
@@ -21,7 +23,7 @@ func Get(endpoint string) []byte {
 		log.Fatalln(err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -29,7 +31,8 @@ func Get(endpoint string) []byte {
 	return body
 }
 
-// curl example
+// curl Examples
+
 // curl 'https://www.dominos.co.uk/Deals/StoreDealGroups?dealsVersion=637670407835700000&fulfilmentMethod=1&isoCode=en-GB&storeId=28131&v=97.1.0.4'
 // -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:91.0) Gecko/20100101 Firefox/91.0'
 // -H 'Accept: application/json, text/plain, */*'
