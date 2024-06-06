@@ -61,3 +61,6 @@ jobs:
 
       - name: tests
         run: make test
+
+      - name: build
+        run: go build
