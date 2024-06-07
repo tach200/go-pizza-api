@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  golangci:
+  lint:
     name: lint
     runs-on: ubuntu-latest
     steps:
@@ -23,44 +23,40 @@ jobs:
       - name: lint
         uses: golangci/golangci-lint-action@v3
         with:
-          # Require: The version of golangci-lint to use.
-          # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
-          # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
           version: v1.54
 
-          # Optional: working directory, useful for monorepos
-          # working-directory: somedir
-
-          # Optional: golangci-lint command line arguments.
-          #
-          # Note: By default, the `.golangci.yml` file should be at the root of the repository.
-          # The location of the configuration file can be changed by using `--config=`
-          # args: --timeout=30m --config=/my/path/.golangci.yml --issues-exit-code=0 
-
-          # Optional: show only new issues if it's a pull request. The default value is `false`.
-          # only-new-issues: true
-
-          # Optional: if set to true, then all caching functionality will be completely disabled,
-          #           takes precedence over all other caching options.
-          # skip-cache: true
-
-          # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
-          # skip-pkg-cache: true
-
-          # Optional: if set to true, then the action won't cache or restore ~/.cache/go-build.
-          # skip-build-cache: true
-
-          # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
-          # install-mode: "goinstall"
-
   test:
-    name: test
+    name: build/test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
+      - name: build
+        run: go build
+
       - name: tests
         run: make test
 
-      - name: build
-        run: go build
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: [ lint, test ]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup aws cli
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.S3_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.S3_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: package build for lambda
+        run: make lambda
+
+      - name: upload to aws s3
+        run: aws s3 cp lambda.zip s3://tach-bucket/lambda.zip
+
+      - name: update aws lambda
+        run: aws lambda update-function-code --function-name getPizzaDeals --s3-bucket $tach-bucket --s3-key lambda.zip
