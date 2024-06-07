@@ -40,7 +40,6 @@ jobs:
   deploy:
     name: deploy
     runs-on: ubuntu-latest
-    if: startsWith(github.event.ref, 'refs/tags/v')
     needs: [ lint, test ]
     steps:
       - uses: actions/checkout@v3
